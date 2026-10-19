@@ -1,0 +1,85 @@
+//
+//  UIViewController-Extensions.swift
+//  NetNewsWire-iOS
+//
+//  Created by Maurice Parker on 1/16/20.
+//  Copyright © 2020 Ranchero Software. All rights reserved.
+//
+
+import UIKit
+import SwiftUI
+import RSCore
+import Account
+
+extension UIViewController {
+
+	/// Size of form sheets on iPad.
+	static let formSheetSize = CGSize(width: 460, height: 400)
+
+	func presentError(_ error: Error, dismiss: (() -> Void)? = nil) {
+		if let accountError = error as? AccountError, accountError.isCredentialsError {
+			presentAccountError(accountError, dismiss: dismiss)
+		} else if let recoverableError = error as? (RecoverableError & LocalizedError), !recoverableError.recoveryOptions.isEmpty {
+			presentErrorWithRecovery(error: recoverableError, dismiss: dismiss)
+		} else {
+			let errorTitle = NSLocalizedString("Error", comment: "Error")
+			presentError(title: errorTitle, message: error.localizedDescription, dismiss: dismiss)
+		}
+	}
+
+}
+
+private extension UIViewController {
+
+	func presentAccountError(_ error: AccountError, dismiss: (() -> Void)? = nil) {
+		let title = NSLocalizedString("Account Error", comment: "Account Error")
+		let alertController = UIAlertController(title: title, message: error.localizedDescription, preferredStyle: .alert)
+
+		if let account = AccountError.account(from: error), CredentialsAccountView.accountTypes.contains(account.type) {
+			let credentialsTitle = NSLocalizedString("Update Credentials", comment: "Update Credentials")
+			let credentialsAction = UIAlertAction(title: credentialsTitle, style: .default) { [weak self] _ in
+				dismiss?()
+
+				let hostingController = UIHostingController(rootView: CredentialsAccountView(accountType: account.type, account: account, didAddAccount: nil))
+				hostingController.modalPresentationStyle = .formSheet
+				hostingController.preferredContentSize = UIViewController.formSheetSize
+				self?.present(hostingController, animated: true)
+			}
+
+			alertController.addAction(credentialsAction)
+			alertController.preferredAction = credentialsAction
+		}
+
+		let dismissTitle = NSLocalizedString("OK", comment: "OK button")
+		let dismissAction = UIAlertAction(title: dismissTitle, style: .default) { _ in
+			dismiss?()
+		}
+		alertController.addAction(dismissAction)
+
+		self.present(alertController, animated: true, completion: nil)
+	}
+
+	func presentErrorWithRecovery(error: RecoverableError & LocalizedError, dismiss: (() -> Void)? = nil) {
+		let title = error.errorDescription ?? NSLocalizedString("Error", comment: "Error")
+		let message = [error.failureReason, error.recoverySuggestion].compactMap { $0 }.joined(separator: " ")
+
+		let alertController = UIAlertController(title: title, message: message, preferredStyle: .alert)
+
+		// Add recovery options as buttons
+		for (index, option) in error.recoveryOptions.enumerated() {
+			let action = UIAlertAction(title: option, style: index == 0 ? .default : .cancel) { _ in
+				dismiss?()
+				_ = error.attemptRecovery(optionIndex: index)
+			}
+			alertController.addAction(action)
+
+			// Make the first option the preferred action
+			if index == 0 {
+				alertController.preferredAction = action
+			}
+		}
+
+		self.present(alertController, animated: true, completion: nil)
+	}
+
+}

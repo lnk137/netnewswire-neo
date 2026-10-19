@@ -1,0 +1,22 @@
+// swift-tools-version:6.2
+import PackageDescription
+
+let package = Package(
+	name: "RSTree",
+	platforms: [.macOS(.v15), .iOS(.v17)],
+	products: [
+		.library(
+			name: "RSTree",
+			type: .dynamic,
+			targets: ["RSTree"])
+	],
+	targets: [
+		.target(
+			name: "RSTree",
+			dependencies: [],
+			swiftSettings: [
+				.enableUpcomingFeature("NonisolatedNonsendingByDefault"),
+				.enableUpcomingFeature("InferIsolatedConformances")
+			])
+	]
+)

@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="utf-8"?>
+<rss version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle">
+<channel>
+    <title>NetNewsWire Betas</title>
+    <link>https://ranchero.com/downloads/netnewswire-beta.xml</link>
+    <description>Most recent NetNewsWire changes with links to updates.</description>
+    <language>en</language>
+
+<item>
+	<title>NetNewsWire 7.2.1b1</title>
+	<description><![CDATA[
+<ul>
+<li>Fixed bug where navigated-to row, in column layout, might appear under column headers
+<li>Fixed bug where scroller hiding/showing could mess up sidebar layout
+<li>Added magnet as an allowed link scheme
+</ul>
+	]]></description>
+	<pubDate>Sun, 18 Oct 2026 11:40:00 -0700</pubDate>
+	<enclosure url="https://github.com/Ranchero-Software/NetNewsWire/releases/download/mac-7.2.1b1/NetNewsWire7.2.1b1.zip" sparkle:version="7223" sparkle:shortVersionString="7.2.1b1" length="10002414" type="application/zip" />
+	<sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+</item>
+
+<item>
+	<title>NetNewsWire 7.2</title>
+	<description><![CDATA[
+In case you missed 7.2b1 — note the new <code>View > Use Column Layout</code> menu item. Also note the new setting for unread counts at the top of the General (first) settings tab.
+<p>
+Changes since 7.2b4:
+<ul>
+<li>Fixed column view bug where next-unread could scroll to a row that’s hidden under the column headers
+</ul>
+Changes since 7.1.5:
+<ul>
+<li>Added unread count display setting — show the count, show a dot, or hide it — which applies to the Dock icon badge, window title, and sidebar
+<li>Added column layout for the timeline — choose View > Use Column Layout
+<li>Expanded View > Sort Articles By with more options (works with standard and column layouts)
+<li>Made timeline sorting per window instead of one setting for the whole app
+<li>Made the Add Feed sheet start with the folder or account selected in the sidebar
+<li>Changed the message for adding a feed that’s already added to include the name of the folder (or folders)
+<li>Fixed bug where YouTube embeds in articles showed an error instead of playing
+<li>Fixed bug where embedded videos with no set height — such as Inoreader’s YouTube player — collapsed to a short strip
+<li>Fixed extra whitespace at the end of Slashdot articles and paragraphs running together
+<li>Fixed parsing of RSS feed titles when a feed contains a textinput section (Slashdot, for instance)
+<li>Added support for the instapaper_ignore class — elements marked with it are now removed from articles
+<li>Changed tabs in pre and code elements in articles to display as four spaces
+<li>Improved finding feeds in a page by skipping links to PDFs, movies, and other files that can’t be feeds
+<li>Changed finding a feed to use the redirected-to URL
+<li>Sped up Today and unread count queries
+<li>Added up to 500 characters of the HTTP error response body to Error Log entries
+<li>Fixed bug where the sidebar could reopen with no width when it had been collapsed in 7.1.x
+<li>Fixed a memory leak when closing a main window
+<li>Fixed a possible crash when the sidebar or timeline had no visible rows
+<li>Changed sorting by title and by feed to sort numbers by value — “Episode 2” comes before “Episode 10”
+<li>Added support for Substack-style footnotes
+<li>Improved CJK text rendering in the article view by adding text-autospace
+<li>Fixed horizontal overflow of WordPress Math blocks and SVGs in the Tiqoe Dark theme
+<li>Improved font sizing and fixed superscript orphans in table cells in the Tiqoe Dark theme`
+</ul>
+	]]></description>
+	<pubDate>Wed, 14 Oct 2026 08:20:00 -0700</pubDate>
+	<enclosure url="https://github.com/Ranchero-Software/NetNewsWire/releases/download/mac-7.2/NetNewsWire7.2.zip" sparkle:version="7222" sparkle:shortVersionString="7.2" length="10000415" type="application/zip" />
+	<sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+</item>
+
+<item>
+	<title>NetNewsWire 7.2b4</title>
+	<description><![CDATA[
+In case you missed 7.2b1 — note the new <code>View > Use Column Layout</code> menu item. Also note the new setting for unread counts at the top of the General (first) settings tab.
+<p>
+Changes since 7.2b3:
+<ul>
+<li>Fixed bug where embedded videos with no set height — such as Inoreader’s YouTube player — collapsed to a short strip
+</ul>
+	]]></description>
+	<pubDate>Sun, 11 Oct 2026 11:10:00 -0700</pubDate>
+	<enclosure url="https://github.com/Ranchero-Software/NetNewsWire/releases/download/mac-7.2b4/NetNewsWire7.2b4.zip" sparkle:version="7221" sparkle:shortVersionString="7.2b4" length="9999900" type="application/zip" />
+	<sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+</item>
+
+<item>
+	<title>NetNewsWire 7.2b3</title>
+	<description><![CDATA[
+In case you missed 7.2b1 — note the new <code>View > Use Column Layout</code> menu item. Also note the new setting for unread counts at the top of the General (first) settings tab.
+<p>
+Changes since 7.2b2:
+<ul>
+<li>Fixed the Settings layout on macOS 15
+<li>Added Spanish translations for Settings and the Sort Articles By menu
+<li>Made each Settings pane size itself to fit, for languages that need more room
+<li>Fixed bug where the sidebar could reopen with no width when it had been collapsed in 7.1.x
+<li>Fixed a memory leak when closing a main window
+<li>Fixed a possible crash when the sidebar or timeline had no visible rows
+<li>Changed sorting by title and by feed to sort numbers by value — “Episode 2” comes before “Episode 10”
+<li>Improved finding feeds in a page by skipping links to X, Twitter, Facebook, and Instagram, and links to files with uppercase extensions or URL queries (such as .PDF or .jpg?w=600)
+<li>Fixed bug where some sites with “youtube” in their names were treated as YouTube
+<li>Fixed Slashdot feed detection (for Slashdot special cases) when the feed comes through a proxy such as FeedBurner
+<li>Changed VoiceOver to say “unread” for sidebar unread counts shown as dots
+</ul>
+	]]></description>
+	<pubDate>Sat, 10 Oct 2026 09:05:00 -0700</pubDate>
+	<enclosure url="https://github.com/Ranchero-Software/NetNewsWire/releases/download/mac-7.2b3/NetNewsWire7.2b3.zip" sparkle:version="7220" sparkle:shortVersionString="7.2b3" length="9999861" type="application/zip" />
+	<sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+</item>
+
+<item>
+	<title>NetNewsWire 7.2b2</title>
+	<description><![CDATA[
+In case you missed 7.2b1 — note the new <code>View > Use Column Layout</code> menu item. Also note the new setting for unread counts at the top of the General (first) settings tab.
+<p>
+Changes since 7.2b1:
+<ul>
+<li>Added support for Substack-style footnotes
+<li>Improved CJK text rendering in the article view by adding text-autospace
+<li>Fixed horizontal overflow of WordPress Math blocks and SVGs in the Tiqoe Dark theme
+</ul>
+	]]></description>
+	<pubDate>Wed, 7 Oct 2026 10:20:00 -0700</pubDate>
+	<enclosure url="https://github.com/Ranchero-Software/NetNewsWire/releases/download/mac-7.2b2/NetNewsWire7.2b2.zip" sparkle:version="7219" sparkle:shortVersionString="7.2b2" length="9891509" type="application/zip" />
+	<sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+</item>
+
+<item>
+	<title>NetNewsWire 7.2b1</title>
+	<description><![CDATA[
+<ul>
+<li>Added unread count display setting — show the count, show a dot, or hide it — which applies to the Dock icon badge, window title, and sidebar
+<li>Added column layout for the timeline — choose View > Use Column Layout
+<li>Expanded View > Sort Articles By with more options (works with standard and column layouts)
+<li>Made timeline sorting per window instead of one setting for the whole app
+<li>Made the Add Feed sheet start with the folder or account selected in the sidebar
+<li>Changed the message for adding a feed that’s already added to include the name of the folder (or folders)
+<li>Fixed bug where YouTube embeds in articles showed an error instead of playing
+<li>Fixed extra whitespace at the end of Slashdot articles and paragraphs running together
+<li>Fixed parsing of RSS feed titles when a feed contains a textinput section (Slashdot, for instance)
+<li>Added support for the instapaper_ignore class — elements marked with it are now removed from articles
+<li>Changed tabs in pre and code elements in articles to display as four spaces
+<li>Improved finding feeds in a page by skipping links to PDFs, movies, and other files that can’t be feeds
+<li>Changed finding a feed to use the redirected-to URL
+<li>Improved font sizing and fixed superscript orphans in table cells in the Tiqoe Dark theme
+<li>Sped up Today and unread count queries
+<li>Added up to 500 characters of the HTTP error response body to Error Log entries
+</ul>
+	]]></description>
+	<pubDate>Tue, 6 Oct 2026 21:15:00 -0700</pubDate>
+	<enclosure url="https://github.com/Ranchero-Software/NetNewsWire/releases/download/mac-7.2b1/NetNewsWire7.2b1.zip" sparkle:version="7217" sparkle:shortVersionString="7.2b1" length="9890992" type="application/zip" />
+	<sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+</item>
+
+<item>
+	<title>NetNewsWire 7.1.5</title>
+	<description><![CDATA[
+<p><b>Changes since 7.1.4:</b>
+<ul>
+<li>Fixed bug introduced in 7.1.4 where the app wouldn’t ask for notifications permission on launch, which meant no unread count in the Dock icon for new users
+</ul>
+	]]></description>
+	<pubDate>Tue, 29 Sep 2026 11:40:00 -0700</pubDate>
+	<enclosure url="https://github.com/Ranchero-Software/NetNewsWire/releases/download/mac-7.1.5/NetNewsWire7.1.5.zip" sparkle:version="7216" sparkle:shortVersionString="7.1.5" length="9794853" type="application/zip" />
+	<sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+</item>
+
+
+<item>
+	<title>NetNewsWire 7.1.4</title>
+	<description><![CDATA[
+<p><b>Changes since 7.1.3:</b>
+<ul>
+<li>Fixed bug where read and starred statuses could stop syncing once more than 999 of them were queued (Feedbin, Feedly, NewsBlur, Reader API)
+<li>Kept syncing read and starred statuses even when sending article content fails
+<li>Kept fetching articles after an error sending statuses, and kept sending the rest of the statuses after one batch of them fails
+<li>Stopped repeatedly reauthorizing a Feedly token the server has rejected
+<li>Fixed bug where some FreshRSS, BazQux, Inoreader, and The Old Reader articles could never be marked read or starred on the server
+<li>Fixed bug where a feed could disappear during syncing when its folder is missing locally (Feedbin and Reader API)
+<li>Fixed bug where syncing could skip some folders (Feedbin and Reader API)
+<li>Fixed bug where an interrupted sync could cause articles to be skipped (Feedbin and Reader API)
+<li>Fixed bug where dates from servers could fail to parse under some system languages
+<li>Fixed bug where iCloud syncing could stall on a batch the server considers too large
+<li>Fixed potential hangs in iCloud syncing
+<li>Made push-triggered iCloud syncing work even when notifications aren’t authorized
+<li>Showed errors in the Error Log when the database can’t be read or written
+<li>Fixed bug where a site asking the app to slow down (429 responses) could slow down refreshing for other sites with similar names
+<li>Sped up openrss.org feeds — the app now fetches one feed an hour instead of one feed every 10 hours
+<li>Fixed bug where the first refresh after launching could be skipped
+<li>Fixed potential hangs while refreshing
+<li>Fixed bug where a feed in On My Mac could fail to update after refreshing
+<li>Stopped the article view from storing cookies and other website data on disk — feed content now runs in a private-browsing-like session
+<li>Recovered from WebKit content-process termination, so articles no longer come up blank after the system reclaims the web views
+<li>Made it so it will download article themes from http and https URLs only, with a maximum download size
+<li>Fixed bug where exported OPML could contain characters that make the file invalid
+<li>Fixed bug where renaming an account in Preferences lost keyboard focus after each keystroke
+<li>Trimmed spaces from the username when adding a Feedbin or NewsBlur account
+<li>Fixed Dinosaurs bugs where sorting lost the selection and where Delete could remove the wrong feeds
+<li>Disabled JavaScript for Slashdot, regardless of the setting, due to dickovers
+<li>Fixed crash that could happen when the app was moved after macOS had run it from a quarantined location, such as the Downloads folder
+</ul>
+	]]></description>
+	<pubDate>Sun, 20 Sep 2026 11:10:00 -0700</pubDate>
+	<enclosure url="https://github.com/Ranchero-Software/NetNewsWire/releases/download/mac-7.1.4/NetNewsWire7.1.4.zip" sparkle:version="7214" sparkle:shortVersionString="7.1.4" length="9794250" type="application/zip" />
+	<sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+</item>
+
+<item>
+	<title>NetNewsWire 7.1.4b3</title>
+	<description><![CDATA[
+<ul>
+<li>Disabled JavaScript for Slashdot, regardless of the setting, due to dickovers
+<li>Fixed crash that could happen when the app was moved after macOS had run it from a quarantined location, such as the Downloads folder
+</ul>
+	]]></description>
+	<pubDate>Fri, 18 Sep 2026 14:20:00 -0700</pubDate>
+	<enclosure url="https://github.com/Ranchero-Software/NetNewsWire/releases/download/mac-7.1.4b3/NetNewsWire7.1.4b3.zip" sparkle:version="7212" sparkle:shortVersionString="7.1.4b3" length="9794328" type="application/zip" />
+	<sparkle:minimumSystemVersion>15.0</sparkle:minimumSystemVersion>
+</item>
+
+</channel>
+</rss>

@@ -1,0 +1,139 @@
+//
+//  ArticleExtractor.swift
+//  NetNewsWire
+//
+//  Created by Maurice Parker on 9/18/19.
+//  Copyright © 2019 Ranchero Software. All rights reserved.
+//
+
+import Foundation
+import Account
+import Secrets
+
+public enum ArticleExtractorState: Sendable {
+    case ready
+    case processing
+    case failedToParse
+    case complete
+	case cancelled
+}
+
+@MainActor protocol ArticleExtractorDelegate {
+	func articleExtractionDidFail(with: Error)
+	func articleExtractionDidComplete(extractedArticle: ExtractedArticle)
+}
+
+@MainActor final class ArticleExtractor {
+	let articleLink: String
+	let delegate: ArticleExtractorDelegate
+	var article: ExtractedArticle?
+
+	var state = ArticleExtractorState.ready
+    private let url: URL
+	private var dataTask: URLSessionDataTask?
+
+	public init?(_ articleLink: String, delegate: ArticleExtractorDelegate) {
+		self.articleLink = articleLink
+		self.delegate = delegate
+
+		let clientURL = "https://extract.feedbin.com/parser"
+		let username = SecretKey.mercuryClientID
+		let articleLinkToUse = ArticleExtractor.specialCaseExtractionLink(for: articleLink) ?? articleLink
+		let signature = articleLinkToUse.hmacUsingSHA1(key: SecretKey.mercuryClientSecret)
+
+		if let base64URL = articleLinkToUse.data(using: .utf8)?.base64EncodedString() {
+			let fullURL = "\(clientURL)/\(username)/\(signature)?base64_url=\(base64URL)"
+			if let url = URL(string: fullURL) {
+				self.url = url
+				return
+			}
+		}
+
+		return nil
+    }
+
+	public func process() {
+
+        state = .processing
+
+		dataTask = URLSession.shared.dataTask(with: url) { [weak self] data, _, error in
+			Task { @MainActor in
+				guard let self else {
+					return
+				}
+				guard self.state != .cancelled else {
+					return
+				}
+
+				if let error = error {
+					self.state = .failedToParse
+					DispatchQueue.main.async {
+						self.delegate.articleExtractionDidFail(with: error)
+					}
+					return
+				}
+
+				guard let data = data else {
+					self.state = .failedToParse
+					DispatchQueue.main.async {
+						self.delegate.articleExtractionDidFail(with: URLError(.cannotDecodeContentData))
+					}
+					return
+				}
+
+				do {
+					let decoder = JSONDecoder()
+					decoder.dateDecodingStrategy = .iso8601
+					let decodedArticle = try decoder.decode(ExtractedArticle.self, from: data)
+
+					Task { @MainActor in
+						self.article = decodedArticle
+						if decodedArticle.content == nil {
+							self.state = .failedToParse
+							self.delegate.articleExtractionDidFail(with: URLError(.cannotDecodeContentData))
+						} else {
+							self.state = .complete
+							self.delegate.articleExtractionDidComplete(extractedArticle: decodedArticle)
+						}
+					}
+				} catch {
+					self.state = .failedToParse
+					Task { @MainActor in
+						self.delegate.articleExtractionDidFail(with: error)
+					}
+				}
+			}
+		}
+
+        dataTask!.resume()
+    }
+
+	public func cancel() {
+		state = .cancelled
+		dataTask?.cancel()
+	}
+}
+
+private extension ArticleExtractor {
+
+	/// Returns a URL string optimized for extraction, applying site-specific transformations where needed.
+	static func specialCaseExtractionLink(for articleLink: String) -> String? {
+		guard let url = URL(string: articleLink),
+			  let host = url.host()?.lowercased() else {
+			return nil
+		}
+
+		// Naver Blog desktop URLs use a JavaScript-heavy SPA that extractors can't parse.
+		// The mobile site (m.blog.naver.com) renders as static HTML and works correctly.
+		if host == "blog.naver.com" {
+			var components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+			components?.host = "m.blog.naver.com"
+			components?.query = nil
+			if let mobileURL = components?.url {
+				return mobileURL.absoluteString
+			}
+		}
+
+		return nil
+	}
+}

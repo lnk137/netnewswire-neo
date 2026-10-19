@@ -1,0 +1,46 @@
+//
+//  UICollectionView-Extensions.swift
+//  NetNewsWire-iOS
+//
+//  Created by Stuart Breckenridge on 15/07/2025.
+//  Copyright © 2025 Ranchero Software. All rights reserved.
+//
+
+#if os(iOS)
+
+import Foundation
+import UIKit
+
+extension UICollectionView {
+
+	/// Selects an item and scrolls it to the middle if it is not visible
+	public func selectItemAndScrollIfNotVisible(at indexPath: IndexPath, animations: Animations) {
+		guard let dataSource = dataSource,
+			let numberOfSections = dataSource.numberOfSections,
+			indexPath.section < numberOfSections(self),
+			indexPath.row < dataSource.collectionView(self, numberOfItemsInSection: indexPath.section) else {
+				return
+		}
+
+		selectItem(at: indexPath, animated: animations.contains(.select), scrollPosition: [])
+
+		// indexPathsForVisibleItems includes cells hidden under the bars —
+		// check the unobscured region instead.
+		// <https://github.com/Ranchero-Software/NetNewsWire/issues/5107>
+		let unobscuredBounds = bounds.inset(by: adjustedContentInset)
+		if let itemFrame = layoutAttributesForItem(at: indexPath)?.frame, unobscuredBounds.contains(itemFrame) {
+			return
+		}
+		scrollToItem(at: indexPath, at: .centeredVertically, animated: animations.contains(.scroll))
+	}
+
+	public func middleVisibleRow() -> IndexPath? {
+		if indexPathsForVisibleItems.count > 2 {
+			return indexPathsForVisibleItems[indexPathsForVisibleItems.count / 2]
+		}
+		return nil
+	}
+
+}
+
+#endif
