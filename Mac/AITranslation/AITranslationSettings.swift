@@ -6,6 +6,14 @@ import LocalAuthentication
 	static let shared = AITranslationSettings()
 	static let changed = Notification.Name("AITranslationSettingsChanged")
 	static let concurrencyChanged = Notification.Name("AITranslationConcurrencyChanged")
+	static let scopeChanged = Notification.Name("AITranslationScopeChanged")
+	var onlyUnread: Bool { defaults.bool(forKey: "AITranslationOnlyUnread") }
+	func setOnlyUnread(_ value: Bool) {
+		guard value != onlyUnread else { return }
+		defaults.set(value, forKey: "AITranslationOnlyUnread")
+		NotificationCenter.default.post(name: Self.scopeChanged, object: self)
+	}
+	func allowsAutomaticTranslation(isRead: Bool) -> Bool { !onlyUnread || !isRead }
 	var concurrency: Int {
 		let value = defaults.object(forKey: "AITranslationConcurrency") as? Int ?? 1
 		return AITranslationWorkerPool.boundedLimit(value)
@@ -14,13 +22,14 @@ import LocalAuthentication
 		defaults.set(AITranslationWorkerPool.boundedLimit(value), forKey: "AITranslationConcurrency")
 		NotificationCenter.default.post(name: Self.concurrencyChanged, object: self)
 	}
-	private let defaults = UserDefaults.standard
+	private let defaults: UserDefaults
 	private let service = "local.lnk137.NetNewsWireNeo.translation.v3"
 	private let account = "api-key"
 	private var cachedAPIKey: String?
 	private(set) var configuration: AITranslationConfiguration
 
-	private init() {
+	init(defaults: UserDefaults = .standard) {
+		self.defaults = defaults
 		if let data = defaults.data(forKey: "AITranslationConfiguration"),
 		   let saved = try? JSONDecoder().decode(AITranslationConfiguration.self, from: data) {
 			configuration = saved

@@ -135,6 +135,8 @@ import Account
 		pool.onAvailable = { [weak self] in self?.startWorker() }
 		NotificationCenter.default.addObserver(self, selector: #selector(concurrencyChanged), name: AITranslationSettings.concurrencyChanged, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(settingsChanged), name: AITranslationSettings.changed, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(scopeChanged), name: AITranslationSettings.scopeChanged, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(statusesChanged(_:)), name: .StatusesDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(articlesDownloaded(_:)), name: .AccountDidDownloadArticles, object: nil)
 	}
 
@@ -199,7 +201,7 @@ import Account
 		let configuration = AITranslationSettings.shared.configuration
 		register(article)
 		postChange()
-		if automatic && (!configuration.automaticallyTranslate || backgroundPaused) { return }
+		if automatic && (!configuration.automaticallyTranslate || backgroundPaused || !AITranslationSettings.shared.allowsAutomaticTranslation(isRead: article.status.read)) { return }
 		let text = sourceText(article)
 		guard !AITranslationClient.isChinese(text) else {
 			skippedIDs.insert(article.accountID + ":" + article.articleID)
@@ -223,7 +225,7 @@ import Account
 			return
 		}
 		failures[key] = nil
-		lastError = nil
+		if !automatic { lastError = nil }
 		let job = Job(article: article, key: key, configuration: configuration, html: article.contentHTML ?? "<p>" + AITranslationClient.escapedHTML(article.contentText ?? article.summary ?? "").replacingOccurrences(of: "\n", with: "<br>") + "</p>", automatic: automatic)
 		if automatic { queue.append(job) } else { queue.insert(job, at: 0) }
 		postChange()
@@ -296,7 +298,31 @@ import Account
 		postChange()
 	}
 
+	@objc private func scopeChanged() {
+		removeIneligibleBackgroundJobs()
+		scanExistingArticles()
+		startWorker()
+		postChange()
+	}
+
+	@objc private func statusesChanged(_ note: Notification) {
+		guard AITranslationSettings.shared.onlyUnread else { return }
+		removeIneligibleBackgroundJobs()
+		if let account = note.object as? Account,
+		   let ids = note.userInfo?[Account.UserInfoKey.articleIDs] as? Set<String> {
+			let articles = entries.values.map(\.article).filter { $0.accountID == account.accountID && ids.contains($0.articleID) && !$0.status.read }
+			for article in articles { enqueue(article, automatic: true) }
+		}
+		startWorker()
+		postChange()
+	}
+
+	private func removeIneligibleBackgroundJobs() {
+		queue.removeAll { $0.automatic && !AITranslationSettings.shared.allowsAutomaticTranslation(isRead: $0.article.status.read) }
+	}
+
 	private func startWorker() {
+		removeIneligibleBackgroundJobs()
 		pool.setLimit(concurrency)
 		while pool.count < pool.limit, !queue.isEmpty, !isPaused {
 			// A cancelled request from the previous settings may still be draining.

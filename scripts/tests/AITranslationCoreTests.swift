@@ -109,7 +109,25 @@ actor ProgressRecorder {
 }
 
 @main struct AITranslationCoreTests {
+	@MainActor static func verifyUnreadScope() {
+		let suite = "NetNewsWireNeo.ScopeTests." + UUID().uuidString
+		guard let defaults = UserDefaults(suiteName: suite) else { preconditionFailure("Missing test defaults") }
+		defer { defaults.removePersistentDomain(forName: suite) }
+		let settings = AITranslationSettings(defaults: defaults)
+		assert(!settings.onlyUnread)
+		assert(settings.allowsAutomaticTranslation(isRead: true))
+		assert(settings.allowsAutomaticTranslation(isRead: false))
+		settings.setConcurrency(5)
+		settings.setOnlyUnread(true)
+		assert(!settings.allowsAutomaticTranslation(isRead: true))
+		assert(settings.allowsAutomaticTranslation(isRead: false))
+		let restored = AITranslationSettings(defaults: defaults)
+		assert(restored.onlyUnread && restored.concurrency == 5)
+		restored.setOnlyUnread(false)
+		assert(restored.allowsAutomaticTranslation(isRead: true))
+	}
 	static func main() async throws {
+		verifyUnreadScope()
 		try await WorkerPoolProbe.verify()
 		for text in ["这是一篇中文文章，介绍如何构建 Agent、API 和 Claude Code 工程实践。", "這是一篇繁體中文文章，介紹人工智慧的應用與工程實踐。", "中文标题"] {
 			assert(AITranslationClient.isChinese(text), text)
