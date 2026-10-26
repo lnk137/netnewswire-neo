@@ -1,222 +1,294 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "0cO-dq-wRh.headerCell.title" : {
-      "comment" : "Class = \"NSTableColumn\"; headerCell.title = \"Starred\"; ObjectID = \"0cO-dq-wRh\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Starred"
+  "sourceLanguage": "en",
+  "strings": {
+    "0cO-dq-wRh.headerCell.title": {
+      "comment": "Class = \"NSTableColumn\"; headerCell.title = \"Starred\"; ObjectID = \"0cO-dq-wRh\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Starred"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Destacados"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destacados"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已收藏"
           }
         }
       }
     },
-    "1Nz-s2-tlh.title" : {
-      "comment" : "Class = \"NSButtonCell\"; title = \"Refresh\"; ObjectID = \"1Nz-s2-tlh\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Refresh"
+    "1Nz-s2-tlh.title": {
+      "comment": "Class = \"NSButtonCell\"; title = \"Refresh\"; ObjectID = \"1Nz-s2-tlh\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Refresh"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Actualizar"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actualizar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "刷新"
           }
         }
       }
     },
-    "5F9-ka-Ic8.headerCell.title" : {
-      "comment" : "Class = \"NSTableColumn\"; headerCell.title = \"Feeds\"; ObjectID = \"5F9-ka-Ic8\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Feeds"
+    "5F9-ka-Ic8.headerCell.title": {
+      "comment": "Class = \"NSTableColumn\"; headerCell.title = \"Feeds\"; ObjectID = \"5F9-ka-Ic8\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Feeds"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fuentes"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuentes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "订阅源"
           }
         }
       }
     },
-    "A8s-1h-rFK.headerCell.title" : {
-      "comment" : "Class = \"NSTableColumn\"; headerCell.title = \"Articles\"; ObjectID = \"A8s-1h-rFK\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Articles"
+    "A8s-1h-rFK.headerCell.title": {
+      "comment": "Class = \"NSTableColumn\"; headerCell.title = \"Articles\"; ObjectID = \"A8s-1h-rFK\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Articles"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Artículos"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Artículos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文章"
           }
         }
       }
     },
-    "el9-XU-UyQ.headerCell.title" : {
-      "comment" : "Class = \"NSTableColumn\"; headerCell.title = \"Databases\"; ObjectID = \"el9-XU-UyQ\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Databases"
+    "el9-XU-UyQ.headerCell.title": {
+      "comment": "Class = \"NSTableColumn\"; headerCell.title = \"Databases\"; ObjectID = \"el9-XU-UyQ\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Databases"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Bases de datos"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Bases de datos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "数据库"
           }
         }
       }
     },
-    "JJX-19-V6q.headerCell.title" : {
-      "comment" : "Class = \"NSTableColumn\"; headerCell.title = \"Statuses\"; ObjectID = \"JJX-19-V6q\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Statuses"
+    "JJX-19-V6q.headerCell.title": {
+      "comment": "Class = \"NSTableColumn\"; headerCell.title = \"Statuses\"; ObjectID = \"JJX-19-V6q\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Statuses"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Estados"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estados"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "状态"
           }
         }
       }
     },
-    "JLZ-2v-hkU.headerCell.title" : {
-      "comment" : "Class = \"NSTableColumn\"; headerCell.title = \"Account\"; ObjectID = \"JLZ-2v-hkU\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Account"
+    "JLZ-2v-hkU.headerCell.title": {
+      "comment": "Class = \"NSTableColumn\"; headerCell.title = \"Account\"; ObjectID = \"JLZ-2v-hkU\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Account"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Cuenta"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Cuenta"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账户"
           }
         }
       }
     },
-    "Jvt-nt-V8z.headerCell.title" : {
-      "comment" : "Class = \"NSTableColumn\"; headerCell.title = \"Folders\"; ObjectID = \"Jvt-nt-V8z\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Folders"
+    "Jvt-nt-V8z.headerCell.title": {
+      "comment": "Class = \"NSTableColumn\"; headerCell.title = \"Folders\"; ObjectID = \"Jvt-nt-V8z\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Folders"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Carpetas"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Carpetas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "文件夹"
           }
         }
       }
     },
-    "KiW-Nc-bVK.title" : {
-      "comment" : "Class = \"NSButtonCell\"; title = \"Vacuum Databases\"; ObjectID = \"KiW-Nc-bVK\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Vacuum Databases"
+    "KiW-Nc-bVK.title": {
+      "comment": "Class = \"NSButtonCell\"; title = \"Vacuum Databases\"; ObjectID = \"KiW-Nc-bVK\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Vacuum Databases"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compactar bases de datos"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compactar bases de datos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清理数据库"
           }
         }
       }
     },
-    "QvC-M9-y7g.title" : {
-      "comment" : "Class = \"NSWindow\"; title = \"Account Stats\"; ObjectID = \"QvC-M9-y7g\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Account Stats"
+    "QvC-M9-y7g.title": {
+      "comment": "Class = \"NSWindow\"; title = \"Account Stats\"; ObjectID = \"QvC-M9-y7g\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Account Stats"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Estadísticas de cuentas"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Estadísticas de cuentas"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "账户统计"
           }
         }
       }
     },
-    "RQ5-kB-Icw.headerCell.title" : {
-      "comment" : "Class = \"NSTableColumn\"; headerCell.title = \"Unread\"; ObjectID = \"RQ5-kB-Icw\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Unread"
+    "RQ5-kB-Icw.headerCell.title": {
+      "comment": "Class = \"NSTableColumn\"; headerCell.title = \"Unread\"; ObjectID = \"RQ5-kB-Icw\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Unread"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No leídos"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No leídos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未读"
           }
         }
       }
     },
-    "xwg-oc-6B1.title" : {
-      "comment" : "Class = \"NSTextFieldCell\"; title = \"Vacuuming may make databases faster.\"; ObjectID = \"xwg-oc-6B1\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Vacuuming may make databases faster."
+    "xwg-oc-6B1.title": {
+      "comment": "Class = \"NSTextFieldCell\"; title = \"Vacuuming may make databases faster.\"; ObjectID = \"xwg-oc-6B1\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Vacuuming may make databases faster."
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Compactar puede acelerar las bases de datos."
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Compactar puede acelerar las bases de datos."
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "清理数据库可能会提升数据库速度。"
           }
         }
       }
     }
   },
-  "version" : "1.2"
+  "version": "1.2"
 }

@@ -1,96 +1,126 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "2tU-5T-uVX.headerCell.title" : {
-      "comment" : "Class = \"NSTableColumn\"; headerCell.title = \"Source\"; ObjectID = \"2tU-5T-uVX\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Source"
+  "sourceLanguage": "en",
+  "strings": {
+    "2tU-5T-uVX.headerCell.title": {
+      "comment": "Class = \"NSTableColumn\"; headerCell.title = \"Source\"; ObjectID = \"2tU-5T-uVX\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Source"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Origen"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Origen"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "来源"
           }
         }
       }
     },
-    "3gn-ze-9Iw.title" : {
-      "comment" : "Class = \"NSButtonCell\"; title = \"Activity Log\"; ObjectID = \"3gn-ze-9Iw\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Activity Log"
+    "3gn-ze-9Iw.title": {
+      "comment": "Class = \"NSButtonCell\"; title = \"Activity Log\"; ObjectID = \"3gn-ze-9Iw\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Activity Log"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Registro de actividad"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registro de actividad"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活动日志"
           }
         }
       }
     },
-    "bqz-DW-5Ae.title" : {
-      "comment" : "Class = \"NSButtonCell\"; title = \"Error Log\"; ObjectID = \"bqz-DW-5Ae\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Error Log"
+    "bqz-DW-5Ae.title": {
+      "comment": "Class = \"NSButtonCell\"; title = \"Error Log\"; ObjectID = \"bqz-DW-5Ae\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Error Log"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Registro de errores"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Registro de errores"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "错误日志"
           }
         }
       }
     },
-    "QvC-M9-y7g.title" : {
-      "comment" : "Class = \"NSWindow\"; title = \"Current Activity\"; ObjectID = \"QvC-M9-y7g\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Current Activity"
+    "QvC-M9-y7g.title": {
+      "comment": "Class = \"NSWindow\"; title = \"Current Activity\"; ObjectID = \"QvC-M9-y7g\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Current Activity"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Actividad actual"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actividad actual"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "当前活动"
           }
         }
       }
     },
-    "WdD-T6-KBR.headerCell.title" : {
-      "comment" : "Class = \"NSTableColumn\"; headerCell.title = \"Activity\"; ObjectID = \"WdD-T6-KBR\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Activity"
+    "WdD-T6-KBR.headerCell.title": {
+      "comment": "Class = \"NSTableColumn\"; headerCell.title = \"Activity\"; ObjectID = \"WdD-T6-KBR\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Activity"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Actividad"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Actividad"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "活动"
           }
         }
       }
     }
   },
-  "version" : "1.2"
+  "version": "1.2"
 }

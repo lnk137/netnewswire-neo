@@ -1,150 +1,198 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "4BZ-ya-evy.title" : {
-      "comment" : "Class = \"NSMenuItem\"; title = \"Sort\"; ObjectID = \"4BZ-ya-evy\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Sort"
+  "sourceLanguage": "en",
+  "strings": {
+    "4BZ-ya-evy.title": {
+      "comment": "Class = \"NSMenuItem\"; title = \"Sort\"; ObjectID = \"4BZ-ya-evy\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Sort"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ordenar"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ordenar"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "排序"
           }
         }
       }
     },
-    "40c-kt-vhO.title" : {
-      "comment" : "Class = \"NSMenuItem\"; title = \"Descending\"; ObjectID = \"40c-kt-vhO\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Descending"
+    "40c-kt-vhO.title": {
+      "comment": "Class = \"NSMenuItem\"; title = \"Descending\"; ObjectID = \"40c-kt-vhO\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Descending"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Descendente"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Descendente"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "降序"
           }
         }
       }
     },
-    "pMf-da-001.title" : {
-      "comment" : "Class = \"NSMenuItem\"; title = \"Date\"; ObjectID = \"pMf-da-001\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Date"
+    "pMf-da-001.title": {
+      "comment": "Class = \"NSMenuItem\"; title = \"Date\"; ObjectID = \"pMf-da-001\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Date"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fecha"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fecha"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "日期"
           }
         }
       }
     },
-    "pMf-fe-002.title" : {
-      "comment" : "Class = \"NSMenuItem\"; title = \"Feed\"; ObjectID = \"pMf-fe-002\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Feed"
+    "pMf-fe-002.title": {
+      "comment": "Class = \"NSMenuItem\"; title = \"Feed\"; ObjectID = \"pMf-fe-002\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Feed"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fuente"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuente"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "订阅源"
           }
         }
       }
     },
-    "pMf-st-005.title" : {
-      "comment" : "Class = \"NSMenuItem\"; title = \"Starred\"; ObjectID = \"pMf-st-005\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Starred"
+    "pMf-st-005.title": {
+      "comment": "Class = \"NSMenuItem\"; title = \"Starred\"; ObjectID = \"pMf-st-005\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Starred"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Destacados"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Destacados"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "已收藏"
           }
         }
       }
     },
-    "pMf-ti-003.title" : {
-      "comment" : "Class = \"NSMenuItem\"; title = \"Title\"; ObjectID = \"pMf-ti-003\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Title"
+    "pMf-ti-003.title": {
+      "comment": "Class = \"NSMenuItem\"; title = \"Title\"; ObjectID = \"pMf-ti-003\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Title"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Título"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Título"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "标题"
           }
         }
       }
     },
-    "pMf-un-004.title" : {
-      "comment" : "Class = \"NSMenuItem\"; title = \"Unread\"; ObjectID = \"pMf-un-004\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Unread"
+    "pMf-un-004.title": {
+      "comment": "Class = \"NSMenuItem\"; title = \"Unread\"; ObjectID = \"pMf-un-004\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Unread"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "No leídos"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No leídos"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "未读"
           }
         }
       }
     },
-    "sOF-Ez-vIL.title" : {
-      "comment" : "Class = \"NSMenuItem\"; title = \"Ascending\"; ObjectID = \"sOF-Ez-vIL\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Ascending"
+    "sOF-Ez-vIL.title": {
+      "comment": "Class = \"NSMenuItem\"; title = \"Ascending\"; ObjectID = \"sOF-Ez-vIL\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Ascending"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Ascendente"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ascendente"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "升序"
           }
         }
       }
     }
   },
-  "version" : "1.2"
+  "version": "1.2"
 }

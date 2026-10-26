@@ -1,113 +1,167 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "account.name.on-my-device" : {
-      "comment" : "Device specific default account name, e.g: On My iPhone",
-      "extractionState" : "stale",
-      "localizations" : {
-        "en" : {
-          "variations" : {
-            "device" : {
-              "appletv" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "On My Apple TV"
+  "sourceLanguage": "en",
+  "strings": {
+    "account.name.on-my-device": {
+      "comment": "Device specific default account name, e.g: On My iPhone",
+      "extractionState": "stale",
+      "localizations": {
+        "en": {
+          "variations": {
+            "device": {
+              "appletv": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "On My Apple TV"
                 }
               },
-              "applevision" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "On My Apple Vision"
+              "applevision": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "On My Apple Vision"
                 }
               },
-              "applewatch" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "On My Apple Watch"
+              "applewatch": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "On My Apple Watch"
                 }
               },
-              "ipad" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "On My iPad"
+              "ipad": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "On My iPad"
                 }
               },
-              "iphone" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "On My iPhone"
+              "iphone": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "On My iPhone"
                 }
               },
-              "ipod" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "On My iPod"
+              "ipod": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "On My iPod"
                 }
               },
-              "mac" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "On My Mac"
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "On My Mac"
                 }
               },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "On My Device"
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "On My Device"
                 }
               }
             }
           }
         },
-        "es" : {
-          "variations" : {
-            "device" : {
-              "appletv" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "En mi Apple TV"
+        "es": {
+          "variations": {
+            "device": {
+              "appletv": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "En mi Apple TV"
                 }
               },
-              "applevision" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "En mi Apple Vision"
+              "applevision": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "En mi Apple Vision"
                 }
               },
-              "applewatch" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "En mi Apple Watch"
+              "applewatch": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "En mi Apple Watch"
                 }
               },
-              "ipad" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "En mi iPad"
+              "ipad": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "En mi iPad"
                 }
               },
-              "iphone" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "En mi iPhone"
+              "iphone": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "En mi iPhone"
                 }
               },
-              "ipod" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "En mi iPod"
+              "ipod": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "En mi iPod"
                 }
               },
-              "mac" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "En mi Mac"
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "En mi Mac"
                 }
               },
-              "other" : {
-                "stringUnit" : {
-                  "state" : "translated",
-                  "value" : "En mi dispositivo"
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "En mi dispositivo"
+                }
+              }
+            }
+          }
+        },
+        "zh-Hans": {
+          "variations": {
+            "device": {
+              "appletv": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "在我的 Apple TV"
+                }
+              },
+              "applevision": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "在我的 Apple Vision"
+                }
+              },
+              "applewatch": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "在我的 Apple Watch"
+                }
+              },
+              "ipad": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "在我的 iPad"
+                }
+              },
+              "iphone": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "在我的 iPhone"
+                }
+              },
+              "ipod": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "在我的 iPod"
+                }
+              },
+              "mac": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "在我的 Mac"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "在我的 设备"
                 }
               }
             }
@@ -116,5 +170,5 @@
       }
     }
   },
-  "version" : "1.1"
+  "version": "1.1"
 }

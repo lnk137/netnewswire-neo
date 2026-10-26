@@ -1,24 +1,30 @@
 {
-  "sourceLanguage" : "en",
-  "strings" : {
-    "cnV-kg-Dn2.ibExternalAccessibilityDescription" : {
-      "comment" : "Class = \"NSOutlineView\"; ibExternalAccessibilityDescription = \"Feeds\"; ObjectID = \"cnV-kg-Dn2\";",
-      "extractionState" : "extracted_with_value",
-      "localizations" : {
-        "en" : {
-          "stringUnit" : {
-            "state" : "new",
-            "value" : "Feeds"
+  "sourceLanguage": "en",
+  "strings": {
+    "cnV-kg-Dn2.ibExternalAccessibilityDescription": {
+      "comment": "Class = \"NSOutlineView\"; ibExternalAccessibilityDescription = \"Feeds\"; ObjectID = \"cnV-kg-Dn2\";",
+      "extractionState": "extracted_with_value",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "new",
+            "value": "Feeds"
           }
         },
-        "es" : {
-          "stringUnit" : {
-            "state" : "translated",
-            "value" : "Fuentes"
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fuentes"
+          }
+        },
+        "zh-Hans": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "订阅源"
           }
         }
       }
     }
   },
-  "version" : "1.2"
+  "version": "1.2"
 }
