@@ -13,6 +13,18 @@ import Testing
 @testable import NetNewsWire
 
 @MainActor @Suite struct ArticleStringFormatterTests {
+	@Test func translatedSummaryPreviewUsesBodyTextAndDecodesEntities() {
+		let preview = ArticleStringFormatter.summaryPreview(html: "<style>.hidden{color:red}</style><script>ignore()</script><p>随着合并次数增长，<a href='https://example.com'>源代码管理</a> 成为瓶颈 &amp; 我们进行了改造。</p>")
+		#expect(preview == "随着合并次数增长，源代码管理 成为瓶颈 & 我们进行了改造。")
+	}
+
+	@Test func translatedSummaryPreviewIsBoundedAndHandlesEmptyBody() {
+		let preview = ArticleStringFormatter.summaryPreview(html: "<p>" + String(repeating: "中文摘要", count: 500) + "</p>")
+		#expect(preview.count <= 300)
+		#expect(!preview.isEmpty)
+		#expect(ArticleStringFormatter.summaryPreview(html: "<p> </p>") == "")
+	}
+
 
 	// MARK: - truncatedTitle
 

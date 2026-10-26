@@ -119,6 +119,10 @@ import RSParser
 		return attributed
 	}
 
+	static func summaryPreview(html: String) -> String {
+		html.strippingHTML(maxCharacters: 300).decodingHTMLEntities().collapsingWhitespace
+	}
+
 	func truncatedSummary(_ article: Article) -> String {
 		guard let body = article.body else {
 			return ""

@@ -7,6 +7,7 @@ import Account
 	static let changed = Notification.Name("AITranslationStateChanged")
 	static let presentationChanged = Notification.Name("AITranslationPresentationChanged")
 	private var translatedTitles = [String: String]()
+	private var translatedSummaries = [String: String]()
 	private var articleKeys = [Article: String]()
 	private struct Job {
 		let article: Article
@@ -161,13 +162,23 @@ import Account
 		return try? JSONDecoder().decode(AITranslationDocument.self, from: data)
 	}
 
+	private func cachePresentation(_ document: AITranslationDocument?, key: String) {
+		translatedTitles[key] = String((document?.title ?? "").trimmingCharacters(in: .whitespacesAndNewlines).prefix(1000))
+		translatedSummaries[key] = document.map { ArticleStringFormatter.summaryPreview(html: $0.body) } ?? ""
+	}
+
 	func translatedTitle(for article: Article) -> String? {
 		let key = key(for: article)
-		if let title = translatedTitles[key] { return title.isEmpty ? nil : title }
-		let title = cachedDocument(for: article)?.title.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-		let truncated = String(title.prefix(1000))
-		translatedTitles[key] = truncated
-		return truncated.isEmpty ? nil : truncated
+		if translatedTitles[key] == nil { cachePresentation(cachedDocument(for: article), key: key) }
+		guard let title = translatedTitles[key], !title.isEmpty else { return nil }
+		return title
+	}
+
+	func translatedSummary(for article: Article) -> String? {
+		let key = key(for: article)
+		if translatedSummaries[key] == nil { cachePresentation(cachedDocument(for: article), key: key) }
+		guard let summary = translatedSummaries[key], !summary.isEmpty else { return nil }
+		return summary
 	}
 
 	func cachedTranslation(for article: Article) -> String? {
@@ -239,6 +250,7 @@ import Account
 		entries.removeAll()
 		cachedKeys.removeAll()
 		translatedTitles.removeAll()
+		translatedSummaries.removeAll()
 		articleKeys.removeAll()
 		NotificationCenter.default.post(name: Self.presentationChanged, object: nil)
 		skippedIDs.removeAll()
@@ -313,7 +325,7 @@ import Account
 			try JSONEncoder().encode(translation).write(to: cacheDirectory.appendingPathComponent(job.key + ".json"), options: .atomic)
 			try? FileManager.default.removeItem(at: cacheDirectory.appendingPathComponent(job.key + ".partial.json"))
 			cachedKeys.insert(job.key)
-			translatedTitles[job.key] = String(translation.title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1000))
+			cachePresentation(translation, key: job.key)
 			NotificationCenter.default.post(name: Self.presentationChanged, object: job.article)
 			completed += 1
 		} catch {

@@ -62,7 +62,7 @@ import Images
 
 	/// The article’s summary, or “(No Text)” when it has neither a title nor a summary.
 	static func summaryText(for article: Article, title: String) -> String {
-		let truncatedSummary = ArticleStringFormatter.shared.truncatedSummary(article)
+		let truncatedSummary = AITranslationService.shared.translatedSummary(for: article) ?? ArticleStringFormatter.shared.truncatedSummary(article)
 		if title.isEmpty && truncatedSummary.isEmpty {
 			return noText
 		}
