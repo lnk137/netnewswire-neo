@@ -101,7 +101,7 @@ final class DetailWebViewController: NSViewController {
 		NSLayoutConstraint.activate([
 			bar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
 			bar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-			bar.topAnchor.constraint(equalTo: view.topAnchor),
+			bar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
 			bar.heightAnchor.constraint(equalToConstant: 120)
 		])
 		translationBar = bar
@@ -115,7 +115,7 @@ final class DetailWebViewController: NSViewController {
 			content.leadingAnchor.constraint(equalTo: view.leadingAnchor),
 			content.trailingAnchor.constraint(equalTo: view.trailingAnchor),
 			content.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-			content.topAnchor.constraint(equalTo: view.topAnchor, constant: 120)
+			content.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 120)
 		])
 	}
 
