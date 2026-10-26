@@ -30,11 +30,15 @@ bash scripts/build-neo.sh
 
 产物：`.build-local/Build/Products/Debug/NetNewsWire Neo.app`。使用独立标识 `local.lnk137.NetNewsWireNeo` 和数据目录，不覆盖官方版的数据。
 
-本机构建使用 ad-hoc 签名和上游开发配置；iCloud、Feedly OAuth 及依赖上游私有服务密钥的阅读视图不具备官方发行版的服务凭据。普通 RSS 本地账号和本次新增的第三方 AI API 不依赖这些服务。官方自动更新已禁用，防止将 Neo 替换回上游版本。
+本机构建使用持久的专用本地证书签名和上游开发配置；iCloud、Feedly OAuth 及依赖上游私有服务密钥的阅读视图不具备官方发行版的服务凭据。普通 RSS 本地账号和本次新增的第三方 AI API 不依赖这些服务。官方自动更新已禁用，防止将 Neo 替换回上游版本。
 
 ## 凭据
 
-后台读取钥匙串不弹授权窗口，每次启动只尝试读取一次；开发版更新导致授权变化时，在设置点击「重新授权钥匙串」可主动授权一次，或重新保存密钥。
+后台读取钥匙串不弹授权窗口。API 密钥保存于钥匙串，正常重启无需重新输入；钥匙串临时锁定时会在后续读取重试，不再将暂时读取失败缓存为永久空密钥。
+
+`scripts/ensure-local-signing.sh` 首次构建时生成专用的本地代码签名证书及私钥，存入当前用户默认钥匙串，仅授权系统 `codesign` 使用私钥；后续构建复用同一证书。指定要求绑定应用标识及证书指纹，不再使用随每次构建变化的 ad-hoc cdhash，也不设置全局证书信任或允许任意应用访问密钥。临时证书文件在导入后删除。请保留该签名身份；删除后重建身份会重新触发钥匙串授权。
+
+旧 ad-hoc 版本的翻译密钥条目保留。新版本使用 v3 条目，迁移时可运行 `conda run -n base python scripts/configure-a6api.py /path/to/agent-secrets.txt --preserve-settings`，从本机凭据库导入并保持现有模型、语言和自动翻译设置；应用启动导入后会删除临时初始化文件。
 
 API 密钥存放于 macOS 钥匙串，不编译进应用，不提交到 Git。a6api 首次安装可运行：
 

@@ -20,7 +20,8 @@ xcodebuild -project NetNewsWire.xcodeproj -scheme NetNewsWire -configuration Deb
   CODE_SIGNING_ALLOWED=NO DEVELOPMENT_TEAM= ORGANIZATION_IDENTIFIER=local.lnk137 \
   DEVELOPER_ENTITLEMENTS=-dev build
 app='.build-local/Build/Products/Debug/NetNewsWire Neo.app'
-# Local ad-hoc signing; do not reuse the upstream developer identity or restricted entitlements.
-codesign --force --deep --sign - "$app"
+# Keep the app-specific certificate stable so updates retain Keychain access.
+signing_identity=$(bash scripts/ensure-local-signing.sh)
+codesign --force --deep --sign "$signing_identity" --timestamp=none "$app"
 codesign --verify --deep --strict "$app"
 printf '\nBuilt: %s\n' "$PWD/$app"

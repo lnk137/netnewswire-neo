@@ -26,7 +26,7 @@ enum AITranslationError: LocalizedError {
 	var errorDescription: String? {
 		switch self {
 		case .configuration: "请填写有效的 HTTPS API 地址、模型和目标语言。"
-		case .missingKey: "请在 AI 翻译设置中保存 API 密钥。"
+		case .missingKey: "请先保存 API 密钥；若已保存，请检查钥匙串是否解锁或点击重新授权，无需重复输入。"
 		case .http(let code): "翻译接口返回 HTTP \(code)。请检查密钥、模型、余额或稍后重试。"
 		case .empty: "模型没有返回译文。请检查模型配置或稍后重试。"
 		case .truncated: "模型输出达到长度上限，未保存不完整译文。请重试或更换模型。"

@@ -15,7 +15,7 @@ import LocalAuthentication
 		NotificationCenter.default.post(name: Self.concurrencyChanged, object: self)
 	}
 	private let defaults = UserDefaults.standard
-	private let service = "local.lnk137.NetNewsWireNeo.translation.v2"
+	private let service = "local.lnk137.NetNewsWireNeo.translation.v3"
 	private let account = "api-key"
 	private var cachedAPIKey: String?
 	private(set) var configuration: AITranslationConfiguration
@@ -45,7 +45,8 @@ import LocalAuthentication
 		var result: CFTypeRef?
 		let status = SecItemCopyMatching(query as CFDictionary, &result)
 		guard status == errSecSuccess, let data = result as? Data else {
-			cachedAPIKey = ""
+			// A locked keychain or denied interaction can recover later in this launch.
+			if status == errSecItemNotFound { cachedAPIKey = "" }
 			return ""
 		}
 		let key = String(data: data, encoding: .utf8) ?? ""
