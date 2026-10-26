@@ -186,16 +186,7 @@ let appName = "NetNewsWire"
 			UserDefaults.standard.set(releaseBuildsURL, forKey: "SUFeedURL")
 		}
 
-		// Initialize Sparkle...
-		let hostBundle = Bundle.main
-		let updateDriver = SPUStandardUserDriver(hostBundle: hostBundle, delegate: self)
-		softwareUpdater = SPUUpdater(hostBundle: hostBundle, applicationBundle: hostBundle, userDriver: updateDriver, delegate: self)
-
-		do {
-			try softwareUpdater?.start()
-		} catch {
-			Self.logger.error("Failed to start software updater with error: \(error.localizedDescription)")
-		}
+		// Neo is updated from its own source tree. An upstream Sparkle update would replace this fork.
 
 		AppDefaults.shared.registerDefaults()
 		let isFirstRun = AppDefaults.shared.isFirstRun
@@ -771,7 +762,11 @@ let appName = "NetNewsWire"
 	}
 
 	@IBAction func checkForUpdates(_ sender: Any?) {
-		softwareUpdater?.checkForUpdates()
+		let alert = NSAlert()
+		alert.messageText = "NetNewsWire Neo"
+		alert.informativeText = "这是本机构建版本，请在 netnewswire-neo 仓库运行 scripts/build-neo.sh 更新。"
+		alert.addButton(withTitle: "好")
+		alert.runModal()
 	}
 }
 

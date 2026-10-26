@@ -1,3 +1,9 @@
+# NetNewsWire Neo
+
+本地 macOS 二次开发分支：简体中文界面、第三方 AI API 翻译、可开关的后台全量翻译。使用、构建和凭据配置见 [NEO.md](NEO.md)。上游项目介绍保留如下。
+
+---
+
 <img src=Technotes/Images/icon_1024.png height=128 width=128 style="display: block; margin: auto;"> 
 
 # NetNewsWire
