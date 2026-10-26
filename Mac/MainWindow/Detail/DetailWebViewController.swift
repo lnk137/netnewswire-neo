@@ -83,14 +83,19 @@ final class DetailWebViewController: NSViewController {
 
 	private func addTranslationControls() {
 		let controls = NSStackView(views: [translateButton, originalButton, translationStatus])
-		controls.spacing = 10
+		controls.spacing = 8
+		for button in [translateButton, originalButton] {
+			button.bezelStyle = .rounded
+			button.controlSize = .small
+			button.font = .systemFont(ofSize: 11)
+		}
 		let progressView = AITranslationProgressView()
 		let bar = NSStackView(views: [controls, progressView])
 		bar.orientation = .vertical
 		bar.alignment = .leading
 		progressView.translatesAutoresizingMaskIntoConstraints = false
 		progressView.widthAnchor.constraint(equalTo: bar.widthAnchor, constant: -24).isActive = true
-		bar.spacing = 10
+		bar.spacing = 4
 		bar.edgeInsets = NSEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
 		bar.translatesAutoresizingMaskIntoConstraints = false
 		translationStatus.textColor = .secondaryLabelColor
@@ -115,7 +120,7 @@ final class DetailWebViewController: NSViewController {
 			content.leadingAnchor.constraint(equalTo: view.leadingAnchor),
 			content.trailingAnchor.constraint(equalTo: view.trailingAnchor),
 			content.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-			content.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 120)
+			content.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 72)
 		])
 	}
 
@@ -437,7 +442,7 @@ private extension DetailWebViewController {
 		delegate?.mouseDidExit(self)
 
 		let theme = ArticleThemesManager.shared.currentTheme
-		let rendering: ArticleRenderer.Rendering
+		var rendering: ArticleRenderer.Rendering
 
 		switch state {
 		case .noSelection:
@@ -458,14 +463,19 @@ private extension DetailWebViewController {
 		var body = rendering.html
 		if let article {
 			let translation = AITranslationService.shared.cachedTranslation(for: article)
-			translateButton.isEnabled = !AITranslationService.shared.isChinese(article)
+			let service = AITranslationService.shared
+			let state = service.status(for: article)
+			translateButton.title = state.hasPrefix("排队第") ? "下一篇翻译" : "翻译文章"
+			translateButton.toolTip = "移至队首，当前文章完成后翻译；暂停时需先继续队列"
+			translateButton.isEnabled = !service.isChinese(article) && translation == nil && !state.hasPrefix("正在翻译")
 			translationStatus.stringValue = AITranslationService.shared.status(for: article)
 			translationStatus.toolTip = translationStatus.stringValue
 			originalButton.isEnabled = translation != nil
 			originalButton.title = showingTranslation ? "查看原文" : "查看译文"
-			if showingTranslation, let translation {
-				let escaped = AITranslationClient.escapedHTML(translation)
-				body = "<section aria-label='AI 译文' style='max-width:76ch;margin:2em auto;padding:0 24px'><p style='font-size:12px;opacity:.65'>AI 译文 · \(AITranslationClient.escapedHTML(AITranslationSettings.shared.configuration.targetLanguage))</p><div style='white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.85'>\(escaped)</div><details style='margin-top:2em'><summary>展开原文</summary>\(rendering.html)</details></section>"
+			if showingTranslation, let document = service.cachedDocument(for: article) {
+				let translated = ArticleRenderer.articleHTML(article: article, theme: theme, translatedTitle: document.title, translatedBody: document.body)
+				body = translated.html
+				rendering.title = translated.title
 			}
 		} else {
 			originalButton.isEnabled = false

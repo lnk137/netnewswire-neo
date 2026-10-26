@@ -105,60 +105,45 @@ final class AITranslationPreferencesViewController: NSViewController {
 }
 
 
-/// The same live queue view is visible in the reader and in preferences.
+/// Compact activity bar with access to the full queue.
 @MainActor final class AITranslationProgressView: NSView {
 	private let summary = NSTextField(labelWithString: "")
-	private let current = NSTextField(labelWithString: "")
-	private let indicator = NSProgressIndicator()
-	private lazy var pause = NSButton(title: "暂停翻译", target: self, action: #selector(togglePause))
-
+	private lazy var pause = NSButton(title: "暂停", target: self, action: #selector(togglePause))
+	private lazy var tasks = NSButton(title: "翻译任务", target: self, action: #selector(showTasks))
 	init() {
 		super.init(frame: .zero)
-		indicator.style = .bar
-		indicator.isIndeterminate = false
-		indicator.minValue = 0
-		indicator.maxValue = 1
-		summary.font = .systemFont(ofSize: 12, weight: .medium)
-		current.font = .systemFont(ofSize: 11)
-		current.textColor = .secondaryLabelColor
-		for label in [summary, current] {
-			label.lineBreakMode = .byTruncatingTail
-			label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+		summary.font = .systemFont(ofSize: 11)
+		summary.textColor = .secondaryLabelColor
+		summary.lineBreakMode = .byTruncatingTail
+		summary.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+		for button in [pause, tasks] {
+			button.bezelStyle = .rounded
+			button.controlSize = .small
+			button.font = .systemFont(ofSize: 11)
+			button.setContentHuggingPriority(.required, for: .horizontal)
+			button.setContentCompressionResistancePriority(.required, for: .horizontal)
 		}
-		let header = NSStackView(views: [summary, pause])
-		header.distribution = .fill
-		pause.setContentHuggingPriority(.required, for: .horizontal)
-		pause.setContentCompressionResistancePriority(.required, for: .horizontal)
-		let stack = NSStackView(views: [header, indicator, current])
-		stack.orientation = .vertical
-		stack.alignment = .leading
-		stack.spacing = 5
+		tasks.image = NSImage(systemSymbolName: "list.bullet.rectangle", accessibilityDescription: nil)
+		tasks.imagePosition = .imageLeading
+		let stack = NSStackView(views: [summary, pause, tasks])
+		stack.spacing = 8
 		stack.translatesAutoresizingMaskIntoConstraints = false
 		addSubview(stack)
 		NSLayoutConstraint.activate([
-			stack.leadingAnchor.constraint(equalTo: leadingAnchor),
-			stack.trailingAnchor.constraint(equalTo: trailingAnchor),
-			stack.topAnchor.constraint(equalTo: topAnchor),
-			stack.bottomAnchor.constraint(equalTo: bottomAnchor),
-			header.widthAnchor.constraint(equalTo: stack.widthAnchor),
-			indicator.widthAnchor.constraint(equalTo: stack.widthAnchor),
-			current.widthAnchor.constraint(equalTo: stack.widthAnchor)
+			stack.leadingAnchor.constraint(equalTo: leadingAnchor), stack.trailingAnchor.constraint(equalTo: trailingAnchor),
+			stack.topAnchor.constraint(equalTo: topAnchor), stack.bottomAnchor.constraint(equalTo: bottomAnchor)
 		])
 		NotificationCenter.default.addObserver(self, selector: #selector(refresh), name: AITranslationService.changed, object: nil)
 		refresh()
 	}
-
 	required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-	@objc private func togglePause() { AITranslationService.shared.togglePause(); refresh() }
+	@objc private func showTasks() { AITranslationQueueWindow.shared.present() }
+	@objc private func togglePause() { AITranslationService.shared.togglePause() }
 	@objc private func refresh() {
 		let service = AITranslationService.shared
-		summary.stringValue = service.progress
-		summary.toolTip = service.progress
-		current.stringValue = service.currentDetail
-		current.toolTip = service.currentDetail
-		indicator.doubleValue = service.fractionCompleted
-		indicator.setAccessibilityLabel("翻译进度")
-		pause.title = service.pauseButtonTitle
+		summary.stringValue = service.lastError != nil ? "翻译失败 · 已暂停" : "\(service.isPaused ? "已暂停" : service.isScanning ? "扫描中" : "AI 翻译") · 待处理 \(service.pendingCount) · 已翻译 \(service.cachedCount)"
+		summary.toolTip = service.currentDetail
+		pause.title = service.isPaused ? "继续" : "暂停"
 		pause.isEnabled = service.canPause
 	}
 }
