@@ -59,6 +59,7 @@ final class DetailWebViewController: NSViewController {
 	private lazy var originalButton = NSButton(title: "查看原文", target: self, action: #selector(toggleTranslation))
 	private let translationStatus = NSTextField(labelWithString: "")
 	private var lastTranslationSignature = ""
+	private var translationBar: NSStackView?
 
 	@objc private func translateArticle() {
 		guard let article else { return }
@@ -91,8 +92,18 @@ final class DetailWebViewController: NSViewController {
 		translationStatus.lineBreakMode = .byTruncatingTail
 		translationStatus.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 		view.addSubview(bar)
+		translationBar = bar
 		NotificationCenter.default.addObserver(self, selector: #selector(translationChanged), name: AITranslationService.changed, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(translationChanged), name: AITranslationSettings.changed, object: nil)
+	}
+
+	override func viewDidLayout() {
+		super.viewDidLayout()
+		let height = min(CGFloat(44), view.bounds.height)
+		translationBar?.frame = NSRect(x: 0, y: view.bounds.height - height, width: view.bounds.width, height: height)
+		for case let contentView as DetailWebView in view.subviews {
+			contentView.frame = NSRect(x: 0, y: 0, width: view.bounds.width, height: view.bounds.height - height)
+		}
 	}
 
 	private var articleTextSize = AppDefaults.shared.articleTextSize
