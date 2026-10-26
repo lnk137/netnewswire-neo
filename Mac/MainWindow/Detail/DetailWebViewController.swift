@@ -92,25 +92,31 @@ final class DetailWebViewController: NSViewController {
 		progressView.widthAnchor.constraint(equalTo: bar.widthAnchor, constant: -24).isActive = true
 		bar.spacing = 10
 		bar.edgeInsets = NSEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
-		bar.frame = NSRect(x: 0, y: view.bounds.height - 120, width: view.bounds.width, height: 120)
-		bar.autoresizingMask = [.width, .minYMargin]
+		bar.translatesAutoresizingMaskIntoConstraints = false
 		translationStatus.textColor = .secondaryLabelColor
 		translationStatus.font = .systemFont(ofSize: 11)
 		translationStatus.lineBreakMode = .byTruncatingTail
 		translationStatus.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
 		view.addSubview(bar)
+		NSLayoutConstraint.activate([
+			bar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+			bar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+			bar.topAnchor.constraint(equalTo: view.topAnchor),
+			bar.heightAnchor.constraint(equalToConstant: 120)
+		])
 		translationBar = bar
 		NotificationCenter.default.addObserver(self, selector: #selector(translationChanged), name: AITranslationService.changed, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(translationChanged), name: AITranslationSettings.changed, object: nil)
 	}
 
-	override func viewDidLayout() {
-		super.viewDidLayout()
-		let height = min(CGFloat(120), view.bounds.height)
-		translationBar?.frame = NSRect(x: 0, y: view.bounds.height - height, width: view.bounds.width, height: height)
-		for case let contentView as DetailWebView in view.subviews {
-			contentView.frame = NSRect(x: 0, y: 0, width: view.bounds.width, height: view.bounds.height - height)
-		}
+	private func constrainContent(_ content: DetailWebView) {
+		content.translatesAutoresizingMaskIntoConstraints = false
+		NSLayoutConstraint.activate([
+			content.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+			content.trailingAnchor.constraint(equalTo: view.trailingAnchor),
+			content.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+			content.topAnchor.constraint(equalTo: view.topAnchor, constant: 120)
+		])
 	}
 
 	private var articleTextSize = AppDefaults.shared.articleTextSize
@@ -167,6 +173,7 @@ final class DetailWebViewController: NSViewController {
 
 		webView = createWebView()
 		view.addSubview(webView)
+		constrainContent(webView)
 		addTranslationControls()
 
 		// Hide the web view until the first reload (navigation) is committed (plus some delay) to avoid the white flash that happens on initial display in dark mode.
@@ -342,6 +349,7 @@ extension DetailWebViewController: WKNavigationDelegate, WKUIDelegate {
 		Self.logger.error("Article web content process terminated — rebuilding the web view.")
 		let newWebView = createWebView()
 		view.addSubview(newWebView, positioned: .below, relativeTo: self.webView)
+		constrainContent(newWebView)
 		self.webView = newWebView
 		reloadHTML()
 	}
@@ -483,6 +491,7 @@ private extension DetailWebViewController {
 			Self.logger.debug("DetailWebViewController: swapping in a fresh web view because the old one may still be scrolling")
 			let newWebView = createWebView()
 			view.addSubview(newWebView, positioned: .below, relativeTo: webView)
+			constrainContent(newWebView)
 			webView = newWebView
 		}
 
