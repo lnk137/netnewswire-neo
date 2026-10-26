@@ -114,6 +114,8 @@ actor ProgressRecorder {
 		guard let defaults = UserDefaults(suiteName: suite) else { preconditionFailure("Missing test defaults") }
 		defer { defaults.removePersistentDomain(forName: suite) }
 		let settings = AITranslationSettings(defaults: defaults)
+		assert(!settings.queuePaused)
+		settings.queuePaused = true
 		assert(!settings.onlyUnread)
 		assert(settings.allowsAutomaticTranslation(isRead: true))
 		assert(settings.allowsAutomaticTranslation(isRead: false))
@@ -123,7 +125,11 @@ actor ProgressRecorder {
 		assert(settings.allowsAutomaticTranslation(isRead: false))
 		let restored = AITranslationSettings(defaults: defaults)
 		assert(restored.onlyUnread && restored.concurrency == 5)
+		assert(restored.queuePaused)
 		restored.setOnlyUnread(false)
+		assert(restored.queuePaused)
+		restored.queuePaused = false
+		assert(!AITranslationSettings(defaults: defaults).queuePaused)
 		assert(restored.allowsAutomaticTranslation(isRead: true))
 	}
 	static func main() async throws {

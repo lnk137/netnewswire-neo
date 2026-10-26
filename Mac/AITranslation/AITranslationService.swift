@@ -70,7 +70,9 @@ import Account
 	private var scanner: Task<Void, Never>?
 	private var failures = [String: String]()
 	private var backgroundPaused = false
-	private(set) var isPaused = false
+	private(set) var isPaused = false {
+		didSet { AITranslationSettings.shared.queuePaused = isPaused }
+	}
 	private(set) var isScanning = false
 	var chunkCompleted: Int { active.values.reduce(0) { $0 + $1.done } }
 	var chunkTotal: Int { active.values.reduce(0) { $0 + $1.total } }
@@ -132,6 +134,7 @@ import Account
 	private init() {
 		let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
 		cacheDirectory = root.appendingPathComponent("NetNewsWire Neo/Translations", isDirectory: true)
+		isPaused = AITranslationSettings.shared.queuePaused
 		pool.onAvailable = { [weak self] in self?.startWorker() }
 		NotificationCenter.default.addObserver(self, selector: #selector(concurrencyChanged), name: AITranslationSettings.concurrencyChanged, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(settingsChanged), name: AITranslationSettings.changed, object: nil)
@@ -246,7 +249,6 @@ import Account
 		retainedCancellationKeys.removeAll()
 		pool.cancelAll()
 		backgroundPaused = false
-		isPaused = false
 		lastError = nil
 		failures.removeAll()
 		entries.removeAll()
@@ -270,7 +272,7 @@ import Account
 	}
 
 	private func scanExistingArticles() {
-		guard !backgroundPaused, !isPaused else { return }
+		guard !backgroundPaused else { return }
 		scanner?.cancel()
 		scanner = Task { [weak self] in
 			guard let self else { return }

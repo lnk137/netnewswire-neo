@@ -8,6 +8,10 @@ import LocalAuthentication
 	static let concurrencyChanged = Notification.Name("AITranslationConcurrencyChanged")
 	static let scopeChanged = Notification.Name("AITranslationScopeChanged")
 	var onlyUnread: Bool { defaults.bool(forKey: "AITranslationOnlyUnread") }
+	var queuePaused: Bool {
+		get { defaults.bool(forKey: "AITranslationQueuePaused") }
+		set { defaults.set(newValue, forKey: "AITranslationQueuePaused") }
+	}
 	func setOnlyUnread(_ value: Bool) {
 		guard value != onlyUnread else { return }
 		defaults.set(value, forKey: "AITranslationOnlyUnread")
