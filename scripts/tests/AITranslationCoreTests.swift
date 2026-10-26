@@ -73,6 +73,35 @@ actor ProgressRecorder {
 		TranslationMockProtocol.responses = [(401, "private provider error")]
 		do { _ = try await client.translate("Hello", configuration: config, apiKey: "test-key"); assertionFailure("401 accepted") }
 		catch { assert(error.localizedDescription.contains("401") && !error.localizedDescription.contains("private provider error")) }
-		print("AI translation tests passed: endpoint validation, lossless chunking, cache invalidation, HTML escaping, response validation, retries and authentication failures.")
+		let html = #"<h2 id="section">A heading</h2><p class='body'>Read <a href="https://example.com/?q=a&gt;b" title="a > b">this link</a> now.</p><!-- keep > --><img src='image.png' srcset='image@2x.png 2x'><ul><li>Item</li></ul><pre><code>if x < y { print("hello") }</code></pre><style>.x{color:red}</style><script>if (a < b) go()</script><svg><text>Keep</text></svg>"#
+		let slots = AITranslationDocument.slots(in: html)
+		assert(slots.map(\.text).joined() == html)
+		assert(!slots.filter(\.translate).contains { $0.text.contains("print") || $0.text.contains("color:red") || $0.text.contains("go()") || $0.text == "Keep" })
+		for fixture in ["<p title='a > b'>Hello &amp; world</p>", "<!-- unclosed comment", "<pre>unclosed code", "<p>1 < 2</p>", String(repeating: "hello ", count: 1000), "<iframe src='video'>fallback</iframe>"] {
+			assert(AITranslationDocument.slots(in: fixture).map(\.text).joined() == fixture)
+		}
+		var mapped = ["title": "中文标题"]
+		for (index, slot) in slots.enumerated() where slot.translate { mapped[String(index)] = "译文 <script>attack()</script>" }
+		let mappedJSON = String(decoding: try JSONEncoder().encode(mapped), as: UTF8.self)
+		func envelope(_ content: String) throws -> String {
+			String(decoding: try JSONSerialization.data(withJSONObject: ["choices": [["finish_reason": "stop", "message": ["content": content]]]]), as: UTF8.self)
+		}
+		TranslationMockProtocol.responses = [(200, try envelope(mappedJSON))]
+		let document = try await client.translateDocument(title: "Original title", html: html, configuration: config, apiKey: "test-key")
+		assert(document.title == "中文标题")
+		let originalMarkup = slots.filter { !$0.translate }.map(\.text)
+		let translatedMarkup = AITranslationDocument.slots(in: document.body).filter { !$0.translate }.map(\.text)
+		assert(originalMarkup == translatedMarkup, "Markup changed")
+		assert(document.body.contains("&lt;script&gt;attack()&lt;/script&gt;"))
+		assert(document.body.contains(#"href="https://example.com/?q=a&gt;b" title="a > b""#))
+		let decoded = try JSONDecoder().decode(AITranslationDocument.self, from: JSONEncoder().encode(document))
+		assert(decoded.body == document.body)
+		for malformed in ["{}", "{\"title\":\"标题\",\"unexpected\":\"多余\"}", "not json"] {
+			TranslationMockProtocol.responses = [(200, try envelope(malformed))]
+			do { _ = try await client.translateDocument(title: "Title", html: "<p>Hello</p>", configuration: config, apiKey: "test-key"); assertionFailure("Invalid slot mapping accepted") }
+			catch { assert(error is AITranslationError) }
+		}
+
+		print("AI translation tests passed: endpoint validation, lossless chunking, cache invalidation, HTML escaping, response validation, retries, authentication failures, preserved HTML/link/image/code structure, slot validation and injection escaping.")
 	}
 }

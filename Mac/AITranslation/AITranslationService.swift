@@ -9,8 +9,47 @@ import Account
 		let article: Article
 		let key: String
 		let configuration: AITranslationConfiguration
-		let text: String
+		let html: String
 		var automatic: Bool
+	}
+	struct Entry: Identifiable {
+		let id: String
+		let article: Article
+		let feedName: String
+		let feedKey: String
+	}
+	private(set) var entries = [String: Entry]()
+	private var cachedKeys = Set<String>()
+	var orderedEntries: [Entry] {
+		let positions = Dictionary(uniqueKeysWithValues: queue.enumerated().map { ($0.element.key, $0.offset + 1) })
+		return entries.values.sorted {
+			let lhs = $0.id == current?.key ? 0 : positions[$0.id] ?? Int.max
+			let rhs = $1.id == current?.key ? 0 : positions[$1.id] ?? Int.max
+			if lhs != rhs { return lhs < rhs }
+			return $0.article.logicalDatePublished > $1.article.logicalDatePublished
+		}
+	}
+	func state(for entry: Entry) -> String {
+		if cachedKeys.contains(entry.id) { return "已完成" }
+		if skippedIDs.contains(entry.article.accountID + ":" + entry.article.articleID) { return "无需翻译" }
+		if failures[entry.id] != nil { return "失败" }
+		if current?.key == entry.id { return isPaused ? "暂停中" : "翻译中" }
+		if queue.contains(where: { $0.key == entry.id }) { return "排队中" }
+		return "未翻译"
+	}
+	func position(for entry: Entry) -> Int? {
+		queue.firstIndex(where: { $0.key == entry.id }).map { $0 + 1 }
+	}
+	func error(for entry: Entry) -> String? { failures[entry.id] }
+	var cachedCount: Int { cachedKeys.count }
+	private func register(_ article: Article) {
+		let key = key(for: article)
+		let outdated = entries.values.filter { $0.id != key && $0.article.accountID == article.accountID && $0.article.articleID == article.articleID }.map(\.id)
+		for id in outdated { entries[id] = nil; cachedKeys.remove(id) }
+		queue.removeAll { outdated.contains($0.key) }
+		entries[key] = Entry(id: key, article: article, feedName: article.feed?.nameForDisplay ?? article.feedID, feedKey: article.accountID + ":" + article.feedID)
+		if FileManager.default.fileExists(atPath: cacheDirectory.appendingPathComponent(key + ".json").path) { cachedKeys.insert(key) }
+		if isChinese(article) { skippedIDs.insert(article.accountID + ":" + article.articleID) }
 	}
 	private var queue = [Job]()
 	private var current: Job?
@@ -85,27 +124,35 @@ import Account
 	}
 
 	func key(for article: Article, configuration: AITranslationConfiguration? = nil) -> String {
-		AITranslationClient.cacheKey(accountID: article.accountID, articleID: article.articleID, text: sourceText(article), configuration: configuration ?? AITranslationSettings.shared.configuration)
+		AITranslationClient.cacheKey(accountID: article.accountID, articleID: article.articleID, text: sourceText(article) + (article.contentHTML ?? ""), configuration: configuration ?? AITranslationSettings.shared.configuration)
 	}
 
 	func isChinese(_ article: Article) -> Bool { AITranslationClient.isChinese(sourceText(article)) }
 
-	func cachedTranslation(for article: Article) -> String? {
+	func cachedDocument(for article: Article) -> AITranslationDocument? {
 		guard !isChinese(article) else { return nil }
-		return try? String(contentsOf: cacheDirectory.appendingPathComponent(key(for: article) + ".txt"), encoding: .utf8)
+		guard let data = try? Data(contentsOf: cacheDirectory.appendingPathComponent(key(for: article) + ".json")) else { return nil }
+		return try? JSONDecoder().decode(AITranslationDocument.self, from: data)
+	}
+
+	func cachedTranslation(for article: Article) -> String? {
+		guard let document = cachedDocument(for: article) else { return nil }
+		return document.title + "\n\n" + AITranslationClient.plainText(html: document.body)
 	}
 
 	func status(for article: Article) -> String {
 		if isChinese(article) { return "中文文章，无需翻译" }
 		let key = key(for: article)
-		if current?.key == key { return "正在翻译…" }
-		if queue.contains(where: { $0.key == key }) { return "已加入翻译队列" }
+		if current?.key == key { return isPaused ? "已暂停" : "正在翻译…" }
 		if let failure = failures[key] { return failure }
+		if let index = queue.firstIndex(where: { $0.key == key }) { return "排队第 \(index + 1) 篇" }
 		return cachedTranslation(for: article) == nil ? "" : "译文已缓存"
 	}
 
 	func enqueue(_ article: Article, automatic: Bool = false) {
 		let configuration = AITranslationSettings.shared.configuration
+		register(article)
+		postChange()
 		if automatic && (!configuration.automaticallyTranslate || backgroundPaused) { return }
 		let text = sourceText(article)
 		guard !AITranslationClient.isChinese(text) else {
@@ -115,19 +162,21 @@ import Account
 		}
 		guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 		let key = key(for: article, configuration: configuration)
-		guard !FileManager.default.fileExists(atPath: cacheDirectory.appendingPathComponent(key + ".txt").path) else { return }
+		guard !FileManager.default.fileExists(atPath: cacheDirectory.appendingPathComponent(key + ".json").path) else { return }
 		if current?.key == key { return }
 		if let index = queue.firstIndex(where: { $0.key == key }) {
 			if !automatic {
 				var job = queue.remove(at: index)
 				job.automatic = false
 				queue.insert(job, at: 0)
+				postChange()
+				startWorker()
 			}
 			return
 		}
 		failures[key] = nil
 		lastError = nil
-		let job = Job(article: article, key: key, configuration: configuration, text: text, automatic: automatic)
+		let job = Job(article: article, key: key, configuration: configuration, html: article.contentHTML ?? "<p>" + AITranslationClient.escapedHTML(article.contentText ?? article.summary ?? "").replacingOccurrences(of: "\n", with: "<br>") + "</p>", automatic: automatic)
 		if automatic { queue.append(job) } else { queue.insert(job, at: 0) }
 		postChange()
 		startWorker()
@@ -149,12 +198,15 @@ import Account
 		isPaused = false
 		lastError = nil
 		failures.removeAll()
+		entries.removeAll()
+		cachedKeys.removeAll()
+		skippedIDs.removeAll()
+		completed = 0
 		scanExistingArticles()
 		postChange()
 	}
 
 	@objc private func articlesDownloaded(_ note: Notification) {
-		guard AITranslationSettings.shared.configuration.automaticallyTranslate else { return }
 		let new = note.userInfo?[Account.UserInfoKey.newArticles] as? Set<Article> ?? []
 		let updated = note.userInfo?[Account.UserInfoKey.updatedArticles] as? Set<Article> ?? []
 		for article in new.union(updated).sorted(by: { ($0.datePublished ?? .distantPast) > ($1.datePublished ?? .distantPast) }) {
@@ -163,7 +215,7 @@ import Account
 	}
 
 	private func scanExistingArticles() {
-		guard AITranslationSettings.shared.configuration.automaticallyTranslate, !backgroundPaused, !isPaused else { return }
+		guard !backgroundPaused, !isPaused else { return }
 		scanner?.cancel()
 		scanner = Task { [weak self] in
 			guard let self else { return }
@@ -175,7 +227,9 @@ import Account
 					guard !Task.isCancelled else { return }
 					let articles = await account.fetchArticlesAsync(.feed(feed))
 					guard !Task.isCancelled else { return }
-					for article in articles.sorted(by: { ($0.datePublished ?? .distantPast) > ($1.datePublished ?? .distantPast) }) {
+					for (index, article) in articles.sorted(by: { ($0.datePublished ?? .distantPast) > ($1.datePublished ?? .distantPast) }).enumerated() {
+						guard !Task.isCancelled else { return }
+						if index.isMultiple(of: 20) { await Task.yield() }
 						self.enqueue(article, automatic: true)
 					}
 					await Task.yield()
@@ -201,12 +255,13 @@ import Account
 				self.chunkTotal = 0
 				self.postChange()
 				do {
-					let translation = try await AITranslationClient().translate(job.text, configuration: job.configuration, apiKey: AITranslationSettings.shared.apiKey) { [weak self] done, total in
+					let translation = try await AITranslationClient().translateDocument(title: job.article.title ?? "", html: job.html, configuration: job.configuration, apiKey: AITranslationSettings.shared.apiKey) { [weak self] done, total in
 						await self?.updateChunks(done, total: total)
 					}
 					try Task.checkCancellation()
 					try FileManager.default.createDirectory(at: self.cacheDirectory, withIntermediateDirectories: true)
-					try translation.write(to: self.cacheDirectory.appendingPathComponent(job.key + ".txt"), atomically: true, encoding: .utf8)
+					try JSONEncoder().encode(translation).write(to: self.cacheDirectory.appendingPathComponent(job.key + ".json"), options: .atomic)
+					self.cachedKeys.insert(job.key)
 					self.completed += 1
 					self.lastError = nil
 				} catch {

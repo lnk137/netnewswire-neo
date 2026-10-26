@@ -105,11 +105,11 @@ import Account
 		return formatter
 	}()
 
-	private init(article: Article?, extractedArticle: ExtractedArticle?, theme: ArticleTheme) {
+	private init(article: Article?, extractedArticle: ExtractedArticle?, theme: ArticleTheme, translatedTitle: String? = nil, translatedBody: String? = nil) {
 		self.article = article
 		self.extractedArticle = extractedArticle
 		self.articleTheme = theme
-		self.title = ArticleStringFormatter.sanitizedTitle(article?.title, forHTML: true) ?? ""
+		self.title = ArticleStringFormatter.sanitizedTitle(translatedTitle ?? article?.title, forHTML: true) ?? ""
 		// Some feeds embed a full HTML document as the article content —
 		// render just the body fragment.
 		// <https://github.com/Ranchero-Software/NetNewsWire/issues/3008>
@@ -117,7 +117,7 @@ import Account
 			self.body = ArticleRenderingSpecialCases.extractBodyFragmentIfNeeded(content)
 			self.baseURL = extractedArticle?.url
 		} else {
-			let articleBody = ArticleRenderingSpecialCases.extractBodyFragmentIfNeeded(article?.body ?? "")
+			let articleBody = ArticleRenderingSpecialCases.extractBodyFragmentIfNeeded(translatedBody ?? article?.body ?? "")
 			self.body = ArticleRenderingSpecialCases.insertParagraphTagsIfNeeded(articleBody, feedURL: article?.feed?.url, homePageURL: article?.feed?.homePageURL)
 			self.baseURL = article?.baseURL?.absoluteString
 		}
@@ -125,8 +125,8 @@ import Account
 
 	// MARK: - API
 
-	static func articleHTML(article: Article, extractedArticle: ExtractedArticle? = nil, theme: ArticleTheme) -> Rendering {
-		let renderer = ArticleRenderer(article: article, extractedArticle: extractedArticle, theme: theme)
+	static func articleHTML(article: Article, extractedArticle: ExtractedArticle? = nil, theme: ArticleTheme, translatedTitle: String? = nil, translatedBody: String? = nil) -> Rendering {
+		let renderer = ArticleRenderer(article: article, extractedArticle: extractedArticle, theme: theme, translatedTitle: translatedTitle, translatedBody: translatedBody)
 		return (renderer.articleCSS, renderer.articleHTML, renderer.title, renderer.baseURL ?? "")
 	}
 
