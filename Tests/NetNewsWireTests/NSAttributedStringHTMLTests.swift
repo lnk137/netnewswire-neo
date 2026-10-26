@@ -9,6 +9,9 @@
 import Foundation
 import XCTest
 #if canImport(AppKit)
+import RSCore
+#endif
+#if canImport(AppKit)
 import AppKit
 #else
 import UIKit
@@ -17,6 +20,28 @@ import UIKit
 @testable import NetNewsWire
 
 @MainActor final class NSAttributedStringHTMLTests: XCTestCase {
+
+	#if canImport(AppKit)
+	func testPlainTranslatedTitleReceivesBaseFontAndCanBeMeasured() {
+		let title = NSAttributedString(string: "重新设计 Anthropic 的源代码管理")
+		let baseFont = NSFont.boldSystemFont(ofSize: 14)
+		let applied = title.applyingBaseFont(baseFont)
+		XCTAssertEqual(applied.string, title.string)
+		XCTAssertEqual((applied.attribute(.font, at: 0, effectiveRange: nil) as? NSFont)?.pointSize, baseFont.pointSize)
+		let measured = MultilineTextFieldSizer.size(for: applied, numberOfLines: 2, width: 250)
+		XCTAssertGreaterThan(measured.size.height, 0)
+	}
+
+	func testBaseFontFillsMissingRunsAndPreservesExistingTraits() {
+		let title = NSMutableAttributedString(string: "中文 bold")
+		title.addAttribute(.font, value: NSFont.boldSystemFont(ofSize: 10), range: NSRange(location: 3, length: 4))
+		let applied = title.applyingBaseFont(NSFont.systemFont(ofSize: 15))
+		XCTAssertNotNil(applied.attribute(.font, at: 0, effectiveRange: nil))
+		let bold = applied.attribute(.font, at: 3, effectiveRange: nil) as? NSFont
+		XCTAssertEqual(bold?.pointSize, 15)
+		XCTAssertTrue(bold?.fontDescriptor.symbolicTraits.contains(.bold) == true)
+	}
+	#endif
 
 	// MARK: - Plain text / basic tags
 

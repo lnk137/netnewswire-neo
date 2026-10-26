@@ -30,9 +30,7 @@ import RSParser
 		let fullRange = NSRange(location: 0, length: mutable.length)
 
 		mutable.enumerateAttribute(.font, in: fullRange, options: []) { (font, range, _) in
-			guard let font = font as? RSFont else {
-				return
-			}
+			let font = font as? RSFont ?? baseFont
 			let mergedFont = Self.mergedFont(font, baseFont: baseFont)
 			mutable.addAttribute(.font, value: mergedFont, range: range)
 		}
