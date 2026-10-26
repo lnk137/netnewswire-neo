@@ -466,7 +466,7 @@ private extension DetailWebViewController {
 			let service = AITranslationService.shared
 			let state = service.status(for: article)
 			translateButton.title = state.hasPrefix("排队第") ? "下一篇翻译" : "翻译文章"
-			translateButton.toolTip = "移至队首，当前文章完成后翻译；暂停时需先继续队列"
+			translateButton.toolTip = "移至队首，有空闲并发位置时优先翻译；暂停时需先继续队列"
 			translateButton.isEnabled = !service.isChinese(article) && translation == nil && !state.hasPrefix("正在翻译")
 			translationStatus.stringValue = AITranslationService.shared.status(for: article)
 			translationStatus.toolTip = translationStatus.stringValue

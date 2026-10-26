@@ -52,7 +52,12 @@ struct AITranslationClient: Sendable {
 
 	let session: URLSession
 
-	init(session: URLSession = .shared) { self.session = session }
+	private static let translationSession: URLSession = {
+		let configuration = URLSessionConfiguration.default
+		configuration.httpMaximumConnectionsPerHost = 20
+		return URLSession(configuration: configuration)
+	}()
+	init(session: URLSession? = nil) { self.session = session ?? Self.translationSession }
 
 	func translate(_ text: String, configuration: AITranslationConfiguration, apiKey: String, progress: (@Sendable (Int, Int) async -> Void)? = nil, structured: Bool = false) async throws -> String {
 		guard let endpoint = configuration.endpoint, !configuration.model.trimmingCharacters(in: .whitespaces).isEmpty,

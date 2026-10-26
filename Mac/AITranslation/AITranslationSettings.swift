@@ -5,6 +5,15 @@ import LocalAuthentication
 @MainActor final class AITranslationSettings {
 	static let shared = AITranslationSettings()
 	static let changed = Notification.Name("AITranslationSettingsChanged")
+	static let concurrencyChanged = Notification.Name("AITranslationConcurrencyChanged")
+	var concurrency: Int {
+		let value = defaults.object(forKey: "AITranslationConcurrency") as? Int ?? 1
+		return AITranslationWorkerPool.boundedLimit(value)
+	}
+	func setConcurrency(_ value: Int) {
+		defaults.set(AITranslationWorkerPool.boundedLimit(value), forKey: "AITranslationConcurrency")
+		NotificationCenter.default.post(name: Self.concurrencyChanged, object: self)
+	}
 	private let defaults = UserDefaults.standard
 	private let service = "local.lnk137.NetNewsWireNeo.translation.v2"
 	private let account = "api-key"

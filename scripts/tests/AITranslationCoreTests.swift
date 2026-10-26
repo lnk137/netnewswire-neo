@@ -39,8 +39,78 @@ actor ProgressRecorder {
 	func valid() -> Bool { values.map { $0.0 } == [0, 1] && values.allSatisfy { $0.1 == 1 } }
 }
 
+@MainActor final class WorkerPoolProbe {
+	let pool = AITranslationWorkerPool()
+	var gates = [String: CheckedContinuation<Void, Never>]()
+	var started = [String]()
+	var cancelled = Set<String>()
+	var pending = (0..<30).map(String.init)
+	var paused = false
+	init() { pool.onAvailable = { [weak self] in self?.fill() } }
+	func fill() {
+		while !paused, !pending.isEmpty, pool.count < pool.limit {
+			let id = pending.removeFirst()
+			pool.start(id) { [self] in
+				started.append(id)
+				await withCheckedContinuation { gates[id] = $0 }
+				if Task.isCancelled { cancelled.insert(id) }
+			}
+		}
+	}
+	func release(_ id: String) { gates.removeValue(forKey: id)?.resume() }
+	func waitFor(_ condition: () -> Bool) async throws {
+		for _ in 0..<1000 {
+			if condition() { return }
+			try await Task.sleep(for: .milliseconds(1))
+		}
+		preconditionFailure("Worker pool did not reach expected state")
+	}
+	static func verify() async throws {
+		assert(AITranslationWorkerPool.boundedLimit(0) == 1)
+		assert(AITranslationWorkerPool.boundedLimit(21) == 20)
+		let probe = WorkerPoolProbe()
+		probe.pool.setLimit(3)
+		probe.fill()
+		try await probe.waitFor { probe.gates.count == 3 }
+		assert(probe.pool.count == 3)
+		assert(!probe.pool.start("0") {})
+		// Increasing fills more slots without cancelling running work.
+		probe.pool.setLimit(20)
+		probe.fill()
+		try await probe.waitFor { probe.gates.count == 20 }
+		assert(probe.started == (0..<20).map(String.init))
+		// Shrinking retains requests and starts nothing while above the new limit.
+		probe.pool.setLimit(1)
+		for id in (1..<20).map(String.init) { probe.release(id) }
+		try await probe.waitFor { probe.pool.count == 1 }
+		assert(probe.started.count == 20)
+		// Prioritized queued work takes the next slot.
+		probe.pending.removeAll { $0 == "29" }
+		probe.pending.insert("29", at: 0)
+		probe.release("0")
+		try await probe.waitFor { probe.gates["29"] != nil }
+		assert(probe.started.last == "29" && probe.pool.count == 1)
+		// Cancellation does not release a slot before the request unwinds.
+		probe.paused = true
+		probe.pool.cancelAll()
+		assert(probe.pool.count == 1)
+		assert(!probe.pool.start("replacement") {})
+		probe.release("29")
+		try await probe.waitFor { probe.pool.count == 0 }
+		assert(probe.cancelled.contains("29"))
+		probe.pending = ["resume"]
+		probe.paused = false
+		probe.fill()
+		try await probe.waitFor { probe.gates["resume"] != nil }
+		probe.paused = true
+		probe.release("resume")
+		try await probe.waitFor { probe.pool.count == 0 }
+	}
+}
+
 @main struct AITranslationCoreTests {
 	static func main() async throws {
+		try await WorkerPoolProbe.verify()
 		for text in ["这是一篇中文文章，介绍如何构建 Agent、API 和 Claude Code 工程实践。", "這是一篇繁體中文文章，介紹人工智慧的應用與工程實踐。", "中文标题"] {
 			assert(AITranslationClient.isChinese(text), text)
 		}
@@ -137,6 +207,6 @@ actor ProgressRecorder {
 		assert(resumed.body == "<p>第一段</p><p>第二段</p>")
 		assert(TranslationMockProtocol.requests.count == requestCount + 1, "Completed segments were requested again")
 
-		print("AI translation tests passed: endpoint validation, lossless chunking, cache invalidation, HTML escaping, response validation, retries, authentication failures, preserved HTML/link/image/code structure, slot validation, injection escaping, adaptive splitting, thinking controls and checkpoint resume.")
+		print("AI translation tests passed: endpoint validation, lossless chunking, cache invalidation, HTML escaping, response validation, retries, authentication failures, preserved HTML/link/image/code structure, slot validation, injection escaping, adaptive splitting, thinking controls and checkpoint resume, 1–20 worker limits, live resizing, priority order and cancellation draining.")
 	}
 }

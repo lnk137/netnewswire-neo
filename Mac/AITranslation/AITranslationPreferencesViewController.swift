@@ -5,6 +5,7 @@ final class AITranslationPreferencesViewController: NSViewController {
 	private let model = NSTextField()
 	private let language = NSTextField()
 	private let apiKey = NSSecureTextField()
+	private let concurrency = NSPopUpButton(frame: .zero, pullsDown: false)
 	private let automatic = NSButton(checkboxWithTitle: "自动后台翻译所有文章", target: nil, action: nil)
 	private let status = NSTextField(wrappingLabelWithString: "")
 	private var testTask: Task<Void, Never>?
@@ -17,11 +18,17 @@ final class AITranslationPreferencesViewController: NSViewController {
 		language.stringValue = configuration.targetLanguage
 		apiKey.placeholderString = AITranslationSettings.shared.apiKey.isEmpty ? "输入 API 密钥" : "已保存至钥匙串；留空保持不变"
 		automatic.state = configuration.automaticallyTranslate ? .on : .off
+		concurrency.addItems(withTitles: (1...20).map { "\($0) 篇" })
+		concurrency.selectItem(at: AITranslationSettings.shared.concurrency - 1)
+		concurrency.target = self
+		concurrency.action = #selector(concurrencySelected)
+		concurrency.setAccessibilityLabel("并发翻译数量")
 		let form = NSGridView(views: [
 			[NSTextField(labelWithString: "API 地址"), baseURL],
 			[NSTextField(labelWithString: "模型"), model],
 			[NSTextField(labelWithString: "API 密钥"), apiKey],
-			[NSTextField(labelWithString: "目标语言"), language]
+			[NSTextField(labelWithString: "目标语言"), language],
+			[NSTextField(labelWithString: "并发翻译"), concurrency]
 		])
 		form.rowSpacing = 14
 		form.columnSpacing = 18
@@ -61,7 +68,11 @@ final class AITranslationPreferencesViewController: NSViewController {
 		updateProgress()
 	}
 
-	@objc private func updateProgress() { status.stringValue = AITranslationService.shared.progress }
+	@objc private func concurrencySelected() { AITranslationSettings.shared.setConcurrency(concurrency.indexOfSelectedItem + 1) }
+	@objc private func updateProgress() {
+		concurrency.selectItem(at: AITranslationSettings.shared.concurrency - 1)
+		status.stringValue = AITranslationService.shared.progress
+	}
 
 	@objc private func authorizeKeychain() {
 		let key = AITranslationSettings.shared.readAPIKey(allowPrompt: true)
@@ -141,7 +152,7 @@ final class AITranslationPreferencesViewController: NSViewController {
 	@objc private func togglePause() { AITranslationService.shared.togglePause() }
 	@objc private func refresh() {
 		let service = AITranslationService.shared
-		summary.stringValue = service.lastError != nil ? "翻译失败 · 已暂停" : "\(service.isPaused ? "已暂停" : service.isScanning ? "扫描中" : "AI 翻译") · 待处理 \(service.pendingCount) · 已翻译 \(service.cachedCount)"
+		summary.stringValue = service.lastError != nil ? "翻译失败 · 已暂停" : "\(service.isPaused ? "已暂停" : service.isScanning ? "扫描中" : "AI 翻译") · 翻译中 \(service.activeCount)/\(service.concurrency) · 待处理 \(service.pendingCount) · 已翻译 \(service.cachedCount)"
 		summary.toolTip = service.currentDetail
 		pause.title = service.isPaused ? "继续" : "暂停"
 		pause.isEnabled = service.canPause

@@ -23,8 +23,8 @@ import Account
 	var orderedEntries: [Entry] {
 		let positions = Dictionary(uniqueKeysWithValues: queue.enumerated().map { ($0.element.key, $0.offset + 1) })
 		return entries.values.sorted {
-			let lhs = $0.id == current?.key ? 0 : positions[$0.id] ?? Int.max
-			let rhs = $1.id == current?.key ? 0 : positions[$1.id] ?? Int.max
+			let lhs = active[$0.id] != nil ? 0 : positions[$0.id] ?? Int.max
+			let rhs = active[$1.id] != nil ? 0 : positions[$1.id] ?? Int.max
 			if lhs != rhs { return lhs < rhs }
 			return $0.article.logicalDatePublished > $1.article.logicalDatePublished
 		}
@@ -33,7 +33,7 @@ import Account
 		if cachedKeys.contains(entry.id) { return "已完成" }
 		if skippedIDs.contains(entry.article.accountID + ":" + entry.article.articleID) { return "无需翻译" }
 		if failures[entry.id] != nil { return "失败" }
-		if current?.key == entry.id { return isPaused ? "暂停中" : "翻译中" }
+		if active[entry.id] != nil { return isPaused ? "暂停中" : "翻译中" }
 		if queue.contains(where: { $0.key == entry.id }) { return "排队中" }
 		return "未翻译"
 	}
@@ -52,21 +52,35 @@ import Account
 		if isChinese(article) { skippedIDs.insert(article.accountID + ":" + article.articleID) }
 	}
 	private var queue = [Job]()
-	private var current: Job?
-	private var worker: Task<Void, Never>?
+	private struct RunningJob {
+		let job: Job
+		let generation: Int
+		var done = 0
+		var total = 0
+		var recovery: String?
+	}
+	private var active = [String: RunningJob]()
+	private let pool = AITranslationWorkerPool()
+	private var generation = 0
+	private var retainedCancellationKeys = Set<String>()
 	private var scanner: Task<Void, Never>?
 	private var failures = [String: String]()
 	private var backgroundPaused = false
-	private var retainCancelledJob = false
 	private(set) var isPaused = false
 	private(set) var isScanning = false
-	private(set) var chunkCompleted = 0
-	private(set) var chunkTotal = 0
-	private(set) var recoveryMessage: String?
+	var chunkCompleted: Int { active.values.reduce(0) { $0 + $1.done } }
+	var chunkTotal: Int { active.values.reduce(0) { $0 + $1.total } }
+	var recoveryMessage: String? { active.values.compactMap(\.recovery).first }
+	var activeCount: Int { active.count }
+	var concurrency: Int { AITranslationSettings.shared.concurrency }
+	func chunkProgress(for entry: Entry) -> String? {
+		guard let running = active[entry.id], running.total > 0 else { return nil }
+		return "\(running.done) / \(running.total)"
+	}
 	var failedCount: Int { failures.count }
 	private var skippedIDs = Set<String>()
 	var skippedChinese: Int { skippedIDs.count }
-	var currentTitle: String? { current?.article.title }
+	var currentTitle: String? { active.count > 1 ? "正在同时翻译 \(active.count) 篇文章" : active.values.first?.job.article.title }
 	var canPause: Bool { pendingCount > 0 || isScanning || isPaused || backgroundPaused }
 	var pauseButtonTitle: String { isPaused || backgroundPaused ? "继续翻译" : "暂停翻译" }
 	var totalCount: Int { completed + pendingCount }
@@ -79,7 +93,7 @@ import Account
 	private(set) var lastError: String?
 	private(set) var completed = 0
 	private let cacheDirectory: URL
-	var pendingCount: Int { queue.count + (current == nil ? 0 : 1) }
+	var pendingCount: Int { queue.count + active.count }
 	var progress: String {
 		let counts = "已完成 \(completed) / \(totalCount) 篇 · 待处理 \(pendingCount) 篇 · 跳过中文 \(skippedChinese) 篇"
 		if let lastError { return "翻译失败，已暂停 · \(lastError)" }
@@ -104,9 +118,9 @@ import Account
 			startWorker()
 		} else {
 			isPaused = true
-			retainCancelledJob = current != nil
+			retainedCancellationKeys.formUnion(active.keys)
 			scanner?.cancel()
-			worker?.cancel()
+			pool.cancelAll()
 		}
 		postChange()
 	}
@@ -114,6 +128,8 @@ import Account
 	private init() {
 		let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
 		cacheDirectory = root.appendingPathComponent("NetNewsWire Neo/Translations", isDirectory: true)
+		pool.onAvailable = { [weak self] in self?.startWorker() }
+		NotificationCenter.default.addObserver(self, selector: #selector(concurrencyChanged), name: AITranslationSettings.concurrencyChanged, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(settingsChanged), name: AITranslationSettings.changed, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(articlesDownloaded(_:)), name: .AccountDidDownloadArticles, object: nil)
 	}
@@ -145,7 +161,7 @@ import Account
 	func status(for article: Article) -> String {
 		if isChinese(article) { return "中文文章，无需翻译" }
 		let key = key(for: article)
-		if current?.key == key { return isPaused ? "已暂停" : "正在翻译…" }
+		if active[key]?.generation == generation { return isPaused ? "已暂停" : "正在翻译…" }
 		if let failure = failures[key] { return failure }
 		if let index = queue.firstIndex(where: { $0.key == key }) { return "排队第 \(index + 1) 篇" }
 		return cachedTranslation(for: article) == nil ? "" : "译文已缓存"
@@ -167,7 +183,7 @@ import Account
 		if automatic && failures[key] != nil { return }
 		if !automatic { failures[key] = nil }
 		guard !FileManager.default.fileExists(atPath: cacheDirectory.appendingPathComponent(key + ".json").path) else { return }
-		if current?.key == key { return }
+		if active[key]?.generation == generation { return }
 		if let index = queue.firstIndex(where: { $0.key == key }) {
 			if !automatic {
 				var job = queue.remove(at: index)
@@ -189,15 +205,16 @@ import Account
 	func stopBackgroundTranslation() {
 		queue.removeAll(where: { $0.automatic })
 		scanner?.cancel()
-		if current?.automatic == true { worker?.cancel() }
+		for (key, running) in active where running.job.automatic { pool.cancel(key) }
 		postChange()
 	}
 
 	@objc private func settingsChanged() {
 		scanner?.cancel()
 		queue.removeAll()
-		retainCancelledJob = false
-		worker?.cancel()
+		generation += 1
+		retainedCancellationKeys.removeAll()
+		pool.cancelAll()
 		backgroundPaused = false
 		isPaused = false
 		lastError = nil
@@ -242,72 +259,68 @@ import Account
 		}
 	}
 
+	@objc private func concurrencyChanged() {
+		startWorker()
+		postChange()
+	}
+
 	private func startWorker() {
-		guard worker == nil, !queue.isEmpty, !isPaused else { return }
-		worker = Task { [weak self] in
-			guard let self else { return }
-			defer {
-				self.current = nil
-				self.worker = nil
-				self.postChange()
-				self.startWorker()
+		pool.setLimit(concurrency)
+		while pool.count < pool.limit, !queue.isEmpty, !isPaused {
+			// A cancelled request from the previous settings may still be draining.
+			guard !pool.contains(queue[0].key) else { break }
+			let job = queue.removeFirst()
+			let jobGeneration = generation
+			active[job.key] = RunningJob(job: job, generation: jobGeneration)
+			pool.start(job.key) { [weak self] in
+				await self?.run(job, generation: jobGeneration)
 			}
-			while !self.queue.isEmpty, !Task.isCancelled {
-				let job = self.queue.removeFirst()
-				self.current = job
-				self.chunkCompleted = 0
-				self.chunkTotal = 0
-				self.recoveryMessage = nil
-				self.postChange()
-				do {
-					let translation = try await AITranslationClient().translateDocument(title: job.article.title ?? "", html: job.html, configuration: job.configuration, apiKey: AITranslationSettings.shared.apiKey, checkpoint: self.cacheDirectory.appendingPathComponent(job.key + ".partial.json"), recovery: { [weak self] message in
-						await self?.updateRecovery(message)
-					}) { [weak self] done, total in
-						await self?.updateChunks(done, total: total)
-					}
-					try Task.checkCancellation()
-					try FileManager.default.createDirectory(at: self.cacheDirectory, withIntermediateDirectories: true)
-					try JSONEncoder().encode(translation).write(to: self.cacheDirectory.appendingPathComponent(job.key + ".json"), options: .atomic)
-					try? FileManager.default.removeItem(at: self.cacheDirectory.appendingPathComponent(job.key + ".partial.json"))
-					self.cachedKeys.insert(job.key)
-					self.completed += 1
-					self.lastError = nil
-				} catch {
-					if Task.isCancelled {
-						if self.retainCancelledJob { self.queue.insert(job, at: 0) }
-						self.retainCancelledJob = false
-						break
-					}
-					let message = error.localizedDescription
-					self.failures[job.key] = message
-					if let contentError = error as? AITranslationError {
-						switch contentError {
-						case .truncated, .invalidResponse, .empty, .tooLarge:
-							self.current = nil
-							self.recoveryMessage = nil
-							self.postChange()
-							continue
-						default: break
-						}
-					}
-					self.queue.insert(job, at: 0)
-					self.lastError = message
-					// Pause the backlog on failure instead of repeatedly spending quota or retrying invalid credentials.
-					self.backgroundPaused = true
-					self.scanner?.cancel()
-					self.isPaused = true
-					break
+		}
+		postChange()
+	}
+
+	private func run(_ job: Job, generation jobGeneration: Int) async {
+		defer { active[job.key] = nil; postChange() }
+		do {
+			let translation = try await AITranslationClient().translateDocument(title: job.article.title ?? "", html: job.html, configuration: job.configuration, apiKey: AITranslationSettings.shared.apiKey, checkpoint: cacheDirectory.appendingPathComponent(job.key + ".partial.json"), recovery: { [weak self] message in
+				await self?.updateRecovery(message, key: job.key)
+			}) { [weak self] done, total in
+				await self?.updateChunks(done, total: total, key: job.key)
+			}
+			try Task.checkCancellation()
+			guard jobGeneration == generation else { return }
+			try FileManager.default.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+			try JSONEncoder().encode(translation).write(to: cacheDirectory.appendingPathComponent(job.key + ".json"), options: .atomic)
+			try? FileManager.default.removeItem(at: cacheDirectory.appendingPathComponent(job.key + ".partial.json"))
+			cachedKeys.insert(job.key)
+			completed += 1
+		} catch {
+			if Task.isCancelled {
+				if retainedCancellationKeys.remove(job.key) != nil, jobGeneration == generation { queue.insert(job, at: 0) }
+				return
+			}
+			guard jobGeneration == generation else { return }
+			failures[job.key] = error.localizedDescription
+			if let contentError = error as? AITranslationError {
+				switch contentError {
+				case .truncated, .invalidResponse, .empty, .tooLarge: return
+				default: break
 				}
-				self.current = nil
-				self.postChange()
 			}
+			queue.insert(job, at: 0)
+			if lastError == nil { lastError = error.localizedDescription }
+			backgroundPaused = true
+			isPaused = true
+			scanner?.cancel()
+			retainedCancellationKeys.formUnion(active.keys.filter { $0 != job.key })
+			for key in active.keys where key != job.key { pool.cancel(key) }
 		}
 	}
 
-	private func updateRecovery(_ message: String?) { recoveryMessage = message; postChange() }
-	private func updateChunks(_ done: Int, total: Int) {
-		chunkCompleted = done
-		chunkTotal = total
+	private func updateRecovery(_ message: String?, key: String) { active[key]?.recovery = message; postChange() }
+	private func updateChunks(_ done: Int, total: Int, key: String) {
+		active[key]?.done = done
+		active[key]?.total = total
 		postChange()
 	}
 

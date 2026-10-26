@@ -69,9 +69,12 @@ private struct TranslationQueueView: View {
 				HStack(alignment: .firstTextBaseline) {
 					VStack(alignment: .leading, spacing: 6) {
 						Text(feeds.first { $0.feedKey == feed }?.feedName ?? "翻译任务").font(.title2.weight(.semibold))
-						Text("总队列 \(service.pendingCount) 篇 · 已翻译 \(service.cachedCount) 篇").font(.subheadline).foregroundStyle(.secondary)
+						Text("翻译中 \(service.activeCount) 篇 · 总队列 \(service.pendingCount) 篇 · 已翻译 \(service.cachedCount) 篇").font(.subheadline).foregroundStyle(.secondary)
 					}
 					Spacer()
+					Picker("并发", selection: Binding(get: { service.concurrency }, set: { AITranslationSettings.shared.setConcurrency($0) })) {
+						ForEach(1...20, id: \.self) { Text("\($0)").tag($0) }
+					}.frame(width: 95).help("同时翻译的文章数，调整后立即生效")
 					if service.lastError == nil {
 						Button(service.pauseButtonTitle, systemImage: service.isPaused ? "play.fill" : "pause.fill") { service.togglePause() }.disabled(!service.canPause)
 					}
@@ -138,12 +141,12 @@ private struct TranslationQueueView: View {
 			}.foregroundStyle(state == "已完成" ? Color.green : state == "翻译中" ? Color.accentColor : Color.secondary).frame(width: 28)
 			VStack(alignment: .leading, spacing: 5) {
 				Text(entry.article.title ?? "无标题").font(.system(size: 13, weight: .medium)).lineLimit(2)
-				HStack { Text(entry.feedName).lineLimit(1); Text("·"); Text(state); if let error = service.error(for: entry) { Text(error).lineLimit(1).help(error) } }.font(.caption).foregroundStyle(.secondary)
+				HStack { Text(entry.feedName).lineLimit(1); Text("·"); Text(state); if let progress = service.chunkProgress(for: entry) { Text(progress).monospacedDigit() }; if let error = service.error(for: entry) { Text(error).lineLimit(1).help(error) } }.font(.caption).foregroundStyle(.secondary)
 			}
 			Spacer(minLength: 8)
 			if state == "已完成" { Button("查看译文") { preview = entry } }
 			else if state != "无需翻译" && state != "翻译中" && state != "暂停中" {
-				Button(state == "失败" ? "重试翻译" : service.position(for: entry) == 1 ? "已在队首" : "下一篇翻译") { service.enqueue(entry.article) }.disabled(service.position(for: entry) == 1 && state != "失败").help("当前文章完成后翻译；暂停时请先继续队列")
+				Button(state == "失败" ? "重试翻译" : service.position(for: entry) == 1 ? "已在队首" : "下一篇翻译") { service.enqueue(entry.article) }.disabled(service.position(for: entry) == 1 && state != "失败").help("有空闲并发位置时优先翻译；暂停时请先继续队列")
 			}
 		}.padding(.vertical, 9)
 	}
