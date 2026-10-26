@@ -28,8 +28,13 @@ import Images
 
 	init(article: Article, showFeedName: TimelineShowFeedName, feedName: String?, byline: String?, iconImage: IconImage?, showIcon: Bool) {
 
-		self.title = ArticleStringFormatter.shared.truncatedTitle(article)
-		self.attributedTitle = ArticleStringFormatter.shared.attributedTruncatedTitle(article)
+		if let translatedTitle = AITranslationService.shared.translatedTitle(for: article) {
+			self.title = translatedTitle
+			self.attributedTitle = NSAttributedString(string: translatedTitle)
+		} else {
+			self.title = ArticleStringFormatter.shared.truncatedTitle(article)
+			self.attributedTitle = ArticleStringFormatter.shared.attributedTruncatedTitle(article)
+		}
 		self.text = Self.summaryText(for: article, title: self.title)
 
 		self.dateString = ArticleStringFormatter.shared.dateString(article.logicalDatePublished)

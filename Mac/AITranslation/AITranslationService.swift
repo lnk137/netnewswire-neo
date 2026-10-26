@@ -5,6 +5,9 @@ import Account
 @MainActor final class AITranslationService {
 	static let shared = AITranslationService()
 	static let changed = Notification.Name("AITranslationStateChanged")
+	static let presentationChanged = Notification.Name("AITranslationPresentationChanged")
+	private var translatedTitles = [String: String]()
+	private var articleKeys = [Article: String]()
 	private struct Job {
 		let article: Article
 		let key: String
@@ -142,7 +145,12 @@ import Account
 	}
 
 	func key(for article: Article, configuration: AITranslationConfiguration? = nil) -> String {
-		AITranslationClient.cacheKey(accountID: article.accountID, articleID: article.articleID, text: sourceText(article) + (article.contentHTML ?? ""), configuration: configuration ?? AITranslationSettings.shared.configuration)
+		let resolved = configuration ?? AITranslationSettings.shared.configuration
+		let usesCurrentSettings = resolved == AITranslationSettings.shared.configuration
+		if usesCurrentSettings, let key = articleKeys[article] { return key }
+		let key = AITranslationClient.cacheKey(accountID: article.accountID, articleID: article.articleID, text: sourceText(article) + (article.contentHTML ?? ""), configuration: resolved)
+		if usesCurrentSettings { articleKeys[article] = key }
+		return key
 	}
 
 	func isChinese(_ article: Article) -> Bool { AITranslationClient.isChinese(sourceText(article)) }
@@ -151,6 +159,15 @@ import Account
 		guard !isChinese(article) else { return nil }
 		guard let data = try? Data(contentsOf: cacheDirectory.appendingPathComponent(key(for: article) + ".json")) else { return nil }
 		return try? JSONDecoder().decode(AITranslationDocument.self, from: data)
+	}
+
+	func translatedTitle(for article: Article) -> String? {
+		let key = key(for: article)
+		if let title = translatedTitles[key] { return title.isEmpty ? nil : title }
+		let title = cachedDocument(for: article)?.title.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+		let truncated = String(title.prefix(1000))
+		translatedTitles[key] = truncated
+		return truncated.isEmpty ? nil : truncated
 	}
 
 	func cachedTranslation(for article: Article) -> String? {
@@ -221,6 +238,9 @@ import Account
 		failures.removeAll()
 		entries.removeAll()
 		cachedKeys.removeAll()
+		translatedTitles.removeAll()
+		articleKeys.removeAll()
+		NotificationCenter.default.post(name: Self.presentationChanged, object: nil)
 		skippedIDs.removeAll()
 		completed = 0
 		scanExistingArticles()
@@ -293,6 +313,8 @@ import Account
 			try JSONEncoder().encode(translation).write(to: cacheDirectory.appendingPathComponent(job.key + ".json"), options: .atomic)
 			try? FileManager.default.removeItem(at: cacheDirectory.appendingPathComponent(job.key + ".partial.json"))
 			cachedKeys.insert(job.key)
+			translatedTitles[job.key] = String(translation.title.trimmingCharacters(in: .whitespacesAndNewlines).prefix(1000))
+			NotificationCenter.default.post(name: Self.presentationChanged, object: job.article)
 			completed += 1
 		} catch {
 			if Task.isCancelled {

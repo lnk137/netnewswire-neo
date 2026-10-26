@@ -65,6 +65,7 @@ extension TimelineViewController {
 			let cell = dequeueCell(TimelineTextColumnCellView.self, identifier: identifier)
 			cell.textField?.font = textFont
 			cell.textField?.stringValue = article.map { columnTitleText(for: $0) } ?? ""
+			cell.toolTip = article?.title
 			return cell
 
 		case .feed:
@@ -154,7 +155,7 @@ private extension TimelineViewController {
 
 	/// An untitled article shows the start of its body instead, as the standard timeline does.
 	func columnTitleText(for article: Article) -> String {
-		let title = ArticleStringFormatter.shared.truncatedTitle(article)
+		let title = AITranslationService.shared.translatedTitle(for: article) ?? ArticleStringFormatter.shared.truncatedTitle(article)
 		if !title.isEmpty {
 			return title
 		}

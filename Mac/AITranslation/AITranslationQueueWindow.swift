@@ -46,7 +46,7 @@ private struct TranslationQueueView: View {
 	}
 	private var visible: [AITranslationService.Entry] {
 		model.entries.filter { entry in
-			(feed == nil || entry.feedKey == feed) && (filter == "全部" || service.state(for: entry) == filter) && (search.isEmpty || (entry.article.title ?? "").localizedCaseInsensitiveContains(search) || entry.feedName.localizedCaseInsensitiveContains(search))
+			(feed == nil || entry.feedKey == feed) && (filter == "全部" || service.state(for: entry) == filter) && (search.isEmpty || ((service.translatedTitle(for: entry.article) ?? "").localizedCaseInsensitiveContains(search) || (entry.article.title ?? "").localizedCaseInsensitiveContains(search)) || entry.feedName.localizedCaseInsensitiveContains(search))
 		}
 	}
 	var body: some View {
@@ -105,7 +105,7 @@ private struct TranslationQueueView: View {
 		}
 		.sheet(item: $preview) { entry in
 			VStack(alignment: .leading, spacing: 16) {
-				HStack { Text(entry.article.title ?? "译文").font(.headline).lineLimit(2); Spacer(); Button("完成") { preview = nil }.keyboardShortcut(.cancelAction) }
+				HStack { Text(service.translatedTitle(for: entry.article) ?? entry.article.title ?? "译文").font(.headline).lineLimit(2); Spacer(); Button("完成") { preview = nil }.keyboardShortcut(.cancelAction) }
 				TranslatedArticlePreview(article: entry.article)
 			}.padding(24).frame(width: 660, height: 520)
 		}
@@ -140,7 +140,7 @@ private struct TranslationQueueView: View {
 				else { Image(systemName: state == "已完成" ? "checkmark.circle.fill" : state == "翻译中" ? "arrow.triangle.2.circlepath" : state == "失败" ? "exclamationmark.circle" : "doc.text") }
 			}.foregroundStyle(state == "已完成" ? Color.green : state == "翻译中" ? Color.accentColor : Color.secondary).frame(width: 28)
 			VStack(alignment: .leading, spacing: 5) {
-				Text(entry.article.title ?? "无标题").font(.system(size: 13, weight: .medium)).lineLimit(2)
+				Text(service.translatedTitle(for: entry.article) ?? entry.article.title ?? "无标题").help(entry.article.title ?? "").font(.system(size: 13, weight: .medium)).lineLimit(2)
 				HStack { Text(entry.feedName).lineLimit(1); Text("·"); Text(state); if let progress = service.chunkProgress(for: entry) { Text(progress).monospacedDigit() }; if let error = service.error(for: entry) { Text(error).lineLimit(1).help(error) } }.font(.caption).foregroundStyle(.secondary)
 			}
 			Spacer(minLength: 8)

@@ -254,6 +254,7 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 		updateShowIcons()
 
 		if !didRegisterForNotifications {
+			NotificationCenter.default.addObserver(self, selector: #selector(translationPresentationChanged(_:)), name: AITranslationService.presentationChanged, object: nil)
 			NotificationCenter.default.addObserver(self, selector: #selector(statusesDidChange(_:)), name: .StatusesDidChange, object: nil)
 			NotificationCenter.default.addObserver(self, selector: #selector(feedIconDidBecomeAvailable(_:)), name: .feedIconDidBecomeAvailable, object: nil)
 			NotificationCenter.default.addObserver(self, selector: #selector(avatarDidBecomeAvailable(_:)), name: .AvatarDidBecomeAvailable, object: nil)
@@ -669,6 +670,14 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 		}
 	}
 
+	@objc private func translationPresentationChanged(_ note: Notification) {
+		if let article = note.object as? Article {
+			reloadVisibleCells(for: [article])
+		} else {
+			reloadVisibleCells()
+		}
+	}
+
 	// MARK: - Notifications
 
 	@objc func statusesDidChange(_ note: Notification) {
@@ -1010,6 +1019,7 @@ extension TimelineViewController: NSTableViewDelegate {
 
 	private func configureTimelineCell(_ cell: TimelineTableCellView, article: Article) {
 		cell.objectValue = article
+		cell.toolTip = article.title
 		let iconImage = article.iconImage()
 		cell.cellData = TimelineCellData(article: article, showFeedName: showFeedNames, feedName: article.feed?.nameForDisplay, byline: article.byline(), iconImage: iconImage, showIcon: showIcons)
 	}
