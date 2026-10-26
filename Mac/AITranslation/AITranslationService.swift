@@ -15,6 +15,7 @@ import Account
 		let configuration: AITranslationConfiguration
 		let html: String
 		var automatic: Bool
+		var respectsUnreadScope: Bool
 	}
 	struct Entry: Identifiable {
 		let id: String
@@ -200,11 +201,12 @@ import Account
 		return cachedTranslation(for: article) == nil ? "" : "译文已缓存"
 	}
 
-	func enqueue(_ article: Article, automatic: Bool = false) {
+	func enqueue(_ article: Article, automatic: Bool = false, respectsUnreadScope: Bool = false, startImmediately: Bool = true) {
 		let configuration = AITranslationSettings.shared.configuration
 		register(article)
 		postChange()
 		if automatic && (!configuration.automaticallyTranslate || backgroundPaused || !AITranslationSettings.shared.allowsAutomaticTranslation(isRead: article.status.read)) { return }
+		if respectsUnreadScope && !AITranslationSettings.shared.allowsAutomaticTranslation(isRead: article.status.read) { return }
 		let text = sourceText(article)
 		guard !AITranslationClient.isChinese(text) else {
 			skippedIDs.insert(article.accountID + ":" + article.articleID)
@@ -221,18 +223,37 @@ import Account
 			if !automatic {
 				var job = queue.remove(at: index)
 				job.automatic = false
+				job.respectsUnreadScope = respectsUnreadScope
 				queue.insert(job, at: 0)
 				postChange()
-				startWorker()
+				if startImmediately { startWorker() }
 			}
 			return
 		}
 		failures[key] = nil
 		if !automatic { lastError = nil }
-		let job = Job(article: article, key: key, configuration: configuration, html: article.contentHTML ?? "<p>" + AITranslationClient.escapedHTML(article.contentText ?? article.summary ?? "").replacingOccurrences(of: "\n", with: "<br>") + "</p>", automatic: automatic)
+		let job = Job(article: article, key: key, configuration: configuration, html: article.contentHTML ?? "<p>" + AITranslationClient.escapedHTML(article.contentText ?? article.summary ?? "").replacingOccurrences(of: "\n", with: "<br>") + "</p>", automatic: automatic, respectsUnreadScope: automatic || respectsUnreadScope)
 		if automatic { queue.append(job) } else { queue.insert(job, at: 0) }
 		postChange()
-		startWorker()
+		if startImmediately { startWorker() }
+	}
+
+	func translateFeed(_ feed: Feed) {
+		guard let account = feed.account else {
+			return
+		}
+		let requestedGeneration = generation
+		Task { [weak self] in
+			let articles = await account.fetchArticlesAsync(.feed(feed))
+			guard let self, self.generation == requestedGeneration else {
+				return
+			}
+			// Insert the whole feed at the front before starting, newest article first.
+			for article in articles.sorted(by: { $0.logicalDatePublished < $1.logicalDatePublished }) {
+				self.enqueue(article, respectsUnreadScope: true, startImmediately: false)
+			}
+			self.startWorker()
+		}
 	}
 
 	func stopBackgroundTranslation() {
@@ -320,7 +341,7 @@ import Account
 	}
 
 	private func removeIneligibleBackgroundJobs() {
-		queue.removeAll { $0.automatic && !AITranslationSettings.shared.allowsAutomaticTranslation(isRead: $0.article.status.read) }
+		queue.removeAll { $0.respectsUnreadScope && !AITranslationSettings.shared.allowsAutomaticTranslation(isRead: $0.article.status.read) }
 	}
 
 	private func startWorker() {

@@ -47,6 +47,14 @@ extension SidebarViewController {
 
 extension SidebarViewController {
 
+	@objc func translateFeedFromContextualMenu(_ sender: Any?) {
+		guard let item = sender as? NSMenuItem, let feed = item.representedObject as? Feed else {
+			return
+		}
+		AITranslationService.shared.translateFeed(feed)
+		AITranslationQueueWindow.shared.present(feedKey: feed.accountID + ":" + feed.feedID)
+	}
+
 	@objc func openHomePageFromContextualMenu(_ sender: Any?) {
 
 		guard let menuItem = sender as? NSMenuItem, let urlString = menuItem.representedObject as? String else {
@@ -228,6 +236,8 @@ private extension SidebarViewController {
 		menu.addItem(NSMenuItem.separator())
 
 		let notificationText = feed.notificationDisplayName.capitalized
+		menu.addItem(menuItem("翻译此订阅源", #selector(translateFeedFromContextualMenu(_:)), feed))
+		menu.addItem(NSMenuItem.separator())
 
 		let notificationMenuItem = menuItem(notificationText, #selector(toggleNotificationsFromContextMenu(_:)), feed)
 		notificationMenuItem.state = feed.newArticleNotificationsEnabled ? .on : .off

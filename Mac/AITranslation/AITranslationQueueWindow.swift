@@ -6,25 +6,32 @@ import RSCore
 
 @MainActor final class AITranslationQueueWindow: NSWindowController {
 	static let shared = AITranslationQueueWindow()
+	static let selectedFeedChanged = Notification.Name("AITranslationSelectedFeedChanged")
+	private let model: TranslationQueueModel
 	private init() {
+		let model = TranslationQueueModel()
+		self.model = model
 		let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 1040, height: 680), styleMask: [.titled, .closable, .miniaturizable, .resizable], backing: .buffered, defer: false)
 		window.title = "翻译任务"
 		window.minSize = NSSize(width: 820, height: 500)
-		window.contentViewController = NSHostingController(rootView: TranslationQueueView())
+		window.contentViewController = NSHostingController(rootView: TranslationQueueView(model: model))
 		window.isReleasedWhenClosed = false
 		super.init(window: window)
 		window.center()
 	}
 	required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
-	func present() {
+	func present(feedKey: String? = nil) {
+		if let feedKey { model.selectedFeed = feedKey }
 		showWindow(nil)
 		window?.makeKeyAndOrderFront(nil)
 		NSApp.activate(ignoringOtherApps: true)
+		if let feedKey { NotificationCenter.default.post(name: Self.selectedFeedChanged, object: feedKey) }
 	}
 }
 
 @MainActor private final class TranslationQueueModel: ObservableObject {
 	@Published var entries = [AITranslationService.Entry]()
+	@Published var selectedFeed: String?
 	init() {
 		NotificationCenter.default.addObserver(self, selector: #selector(refresh), name: AITranslationService.changed, object: nil)
 		refresh()
@@ -33,8 +40,11 @@ import RSCore
 }
 
 private struct TranslationQueueView: View {
-	@StateObject private var model = TranslationQueueModel()
-	@State private var feed: String?
+	@ObservedObject var model: TranslationQueueModel
+	private var feed: String? {
+		get { model.selectedFeed }
+		nonmutating set { model.selectedFeed = newValue }
+	}
 	@State private var filter = "全部"
 	@State private var search = ""
 	@State private var preview: AITranslationService.Entry?
@@ -51,7 +61,7 @@ private struct TranslationQueueView: View {
 	}
 	var body: some View {
 		NavigationSplitView {
-			List(selection: $feed) {
+			List(selection: $model.selectedFeed) {
 				Label("所有订阅源", systemImage: "tray.full").tag(nil as String?)
 				Section("订阅源") {
 					ForEach(feeds, id: \.feedKey) { item in
@@ -108,6 +118,11 @@ private struct TranslationQueueView: View {
 				HStack { Text(service.translatedTitle(for: entry.article) ?? entry.article.title ?? "译文").font(.headline).lineLimit(2); Spacer(); Button("完成") { preview = nil }.keyboardShortcut(.cancelAction) }
 				TranslatedArticlePreview(article: entry.article)
 			}.padding(24).frame(width: 660, height: 520)
+		}
+		.onReceive(NotificationCenter.default.publisher(for: AITranslationQueueWindow.selectedFeedChanged)) { note in
+			feed = note.object as? String
+			filter = "全部"
+			search = ""
 		}
 	}
 	private var activityPanel: some View {
