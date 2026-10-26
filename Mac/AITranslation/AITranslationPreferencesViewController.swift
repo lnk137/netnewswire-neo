@@ -38,7 +38,8 @@ final class AITranslationPreferencesViewController: NSViewController {
 		hint.textColor = .secondaryLabelColor
 		let save = NSButton(title: "保存设置", target: self, action: #selector(saveSettings))
 		let test = NSButton(title: "测试连接", target: self, action: #selector(testConnection))
-		let actions = NSStackView(views: [save, test])
+		let authorize = NSButton(title: "重新授权钥匙串", target: self, action: #selector(authorizeKeychain))
+		let actions = NSStackView(views: [save, test, authorize])
 		actions.spacing = 12
 		status.textColor = .secondaryLabelColor
 		let progressView = AITranslationProgressView()
@@ -61,6 +62,11 @@ final class AITranslationPreferencesViewController: NSViewController {
 	}
 
 	@objc private func updateProgress() { status.stringValue = AITranslationService.shared.progress }
+
+	@objc private func authorizeKeychain() {
+		let key = AITranslationSettings.shared.readAPIKey(allowPrompt: true)
+		status.stringValue = key.isEmpty ? "未取得密钥。可在上方重新输入并保存。" : "钥匙串已授权，可点击继续翻译。"
+	}
 
 	private func persist() throws {
 		let configuration = AITranslationConfiguration(baseURL: baseURL.stringValue.trimmingCharacters(in: .whitespacesAndNewlines), model: model.stringValue.trimmingCharacters(in: .whitespacesAndNewlines), targetLanguage: language.stringValue.trimmingCharacters(in: .whitespacesAndNewlines), automaticallyTranslate: automatic.state == .on)
@@ -121,6 +127,8 @@ final class AITranslationPreferencesViewController: NSViewController {
 		}
 		let header = NSStackView(views: [summary, pause])
 		header.distribution = .fill
+		pause.setContentHuggingPriority(.required, for: .horizontal)
+		pause.setContentCompressionResistancePriority(.required, for: .horizontal)
 		let stack = NSStackView(views: [header, indicator, current])
 		stack.orientation = .vertical
 		stack.alignment = .leading

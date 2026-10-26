@@ -1,12 +1,14 @@
 import Foundation
 import Security
+import LocalAuthentication
 
 @MainActor final class AITranslationSettings {
 	static let shared = AITranslationSettings()
 	static let changed = Notification.Name("AITranslationSettingsChanged")
 	private let defaults = UserDefaults.standard
-	private let service = "local.lnk137.NetNewsWireNeo.translation"
+	private let service = "local.lnk137.NetNewsWireNeo.translation.v2"
 	private let account = "api-key"
+	private var cachedAPIKey: String?
 	private(set) var configuration: AITranslationConfiguration
 
 	private init() {
@@ -17,13 +19,29 @@ import Security
 	}
 
 	var apiKey: String {
-		let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+		if let cachedAPIKey { return cachedAPIKey }
+		return readAPIKey(allowPrompt: false)
+	}
+
+	/// Background jobs must never present authorization dialogs. Explicit UI retries only once.
+	@discardableResult func readAPIKey(allowPrompt: Bool) -> String {
+		var query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
 			kSecAttrService as String: service, kSecAttrAccount as String: account,
 			kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
+		if !allowPrompt {
+			let context = LAContext()
+			context.interactionNotAllowed = true
+			query[kSecUseAuthenticationContext as String] = context
+		}
 		var result: CFTypeRef?
-		guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-			  let data = result as? Data else { return "" }
-		return String(data: data, encoding: .utf8) ?? ""
+		let status = SecItemCopyMatching(query as CFDictionary, &result)
+		guard status == errSecSuccess, let data = result as? Data else {
+			cachedAPIKey = ""
+			return ""
+		}
+		let key = String(data: data, encoding: .utf8) ?? ""
+		cachedAPIKey = key
+		return key
 	}
 
 	func save(_ configuration: AITranslationConfiguration, apiKey: String?) throws {
@@ -41,6 +59,7 @@ import Security
 				status = SecItemAdd(item as CFDictionary, nil)
 			}
 			guard status == errSecSuccess else { throw NSError(domain: NSOSStatusErrorDomain, code: Int(status)) }
+			cachedAPIKey = String(data: data, encoding: .utf8)
 		}
 		defaults.set(try JSONEncoder().encode(configuration), forKey: "AITranslationConfiguration")
 		self.configuration = configuration
