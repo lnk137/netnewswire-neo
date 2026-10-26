@@ -10,7 +10,7 @@ final class AITranslationPreferencesViewController: NSViewController {
 	private var testTask: Task<Void, Never>?
 
 	override func loadView() {
-		view = NSView(frame: NSRect(x: 0, y: 0, width: 650, height: 480))
+		view = NSView(frame: NSRect(x: 0, y: 0, width: 650, height: 540))
 		let configuration = AITranslationSettings.shared.configuration
 		baseURL.stringValue = configuration.baseURL
 		model.stringValue = configuration.model
@@ -34,14 +34,15 @@ final class AITranslationPreferencesViewController: NSViewController {
 		language.setAccessibilityLabel("目标语言")
 		automatic.target = self
 		automatic.action = #selector(automaticChanged)
-		let hint = NSTextField(wrappingLabelWithString: "开启后会翻译现有及后续抓取的 RSS 文章，并发送到所填 API 服务，产生相应调用费用。关闭后停止后台队列。译文保存在本机，原文始终保留。")
+		let hint = NSTextField(wrappingLabelWithString: "开启后会翻译现有及后续抓取的非中文 RSS 文章，并发送到所填 API 服务，产生相应调用费用。关闭后停止后台队列。译文保存在本机，原文始终保留。")
 		hint.textColor = .secondaryLabelColor
 		let save = NSButton(title: "保存设置", target: self, action: #selector(saveSettings))
 		let test = NSButton(title: "测试连接", target: self, action: #selector(testConnection))
 		let actions = NSStackView(views: [save, test])
 		actions.spacing = 12
 		status.textColor = .secondaryLabelColor
-		let stack = NSStackView(views: [form, automatic, hint, actions, status])
+		let progressView = AITranslationProgressView()
+		let stack = NSStackView(views: [form, automatic, hint, actions, progressView, status])
 		stack.orientation = .vertical
 		stack.alignment = .leading
 		stack.spacing = 22
@@ -52,7 +53,8 @@ final class AITranslationPreferencesViewController: NSViewController {
 			stack.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -28),
 			stack.topAnchor.constraint(equalTo: view.topAnchor, constant: 28),
 			hint.widthAnchor.constraint(equalTo: stack.widthAnchor),
-			status.widthAnchor.constraint(equalTo: stack.widthAnchor)
+			status.widthAnchor.constraint(equalTo: stack.widthAnchor),
+			progressView.widthAnchor.constraint(equalTo: stack.widthAnchor)
 		])
 		NotificationCenter.default.addObserver(self, selector: #selector(updateProgress), name: AITranslationService.changed, object: nil)
 		updateProgress()
@@ -93,5 +95,62 @@ final class AITranslationPreferencesViewController: NSViewController {
 				self?.status.stringValue = "连接成功：\(text)"
 			} catch { self?.status.stringValue = error.localizedDescription }
 		}
+	}
+}
+
+
+/// The same live queue view is visible in the reader and in preferences.
+@MainActor final class AITranslationProgressView: NSView {
+	private let summary = NSTextField(labelWithString: "")
+	private let current = NSTextField(labelWithString: "")
+	private let indicator = NSProgressIndicator()
+	private lazy var pause = NSButton(title: "暂停翻译", target: self, action: #selector(togglePause))
+
+	init() {
+		super.init(frame: .zero)
+		indicator.style = .bar
+		indicator.isIndeterminate = false
+		indicator.minValue = 0
+		indicator.maxValue = 1
+		summary.font = .systemFont(ofSize: 12, weight: .medium)
+		current.font = .systemFont(ofSize: 11)
+		current.textColor = .secondaryLabelColor
+		for label in [summary, current] {
+			label.lineBreakMode = .byTruncatingTail
+			label.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+		}
+		let header = NSStackView(views: [summary, pause])
+		header.distribution = .fill
+		let stack = NSStackView(views: [header, indicator, current])
+		stack.orientation = .vertical
+		stack.alignment = .leading
+		stack.spacing = 5
+		stack.translatesAutoresizingMaskIntoConstraints = false
+		addSubview(stack)
+		NSLayoutConstraint.activate([
+			stack.leadingAnchor.constraint(equalTo: leadingAnchor),
+			stack.trailingAnchor.constraint(equalTo: trailingAnchor),
+			stack.topAnchor.constraint(equalTo: topAnchor),
+			stack.bottomAnchor.constraint(equalTo: bottomAnchor),
+			header.widthAnchor.constraint(equalTo: stack.widthAnchor),
+			indicator.widthAnchor.constraint(equalTo: stack.widthAnchor),
+			current.widthAnchor.constraint(equalTo: stack.widthAnchor)
+		])
+		NotificationCenter.default.addObserver(self, selector: #selector(refresh), name: AITranslationService.changed, object: nil)
+		refresh()
+	}
+
+	required init?(coder: NSCoder) { fatalError("init(coder:) has not been implemented") }
+	@objc private func togglePause() { AITranslationService.shared.togglePause(); refresh() }
+	@objc private func refresh() {
+		let service = AITranslationService.shared
+		summary.stringValue = service.progress
+		summary.toolTip = service.progress
+		current.stringValue = service.currentDetail
+		current.toolTip = service.currentDetail
+		indicator.doubleValue = service.fractionCompleted
+		indicator.setAccessibilityLabel("翻译进度")
+		pause.title = service.pauseButtonTitle
+		pause.isEnabled = service.canPause
 	}
 }

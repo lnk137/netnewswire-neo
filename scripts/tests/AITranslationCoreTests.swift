@@ -20,6 +20,12 @@ final class TranslationMockProtocol: URLProtocol, @unchecked Sendable {
 	override func stopLoading() {}
 }
 
+actor ProgressRecorder {
+	var values = [(Int, Int)]()
+	func record(_ done: Int, _ total: Int) { values.append((done, total)) }
+	func valid() -> Bool { values.map { $0.0 } == [0, 1] && values.allSatisfy { $0.1 == 1 } }
+}
+
 @main struct AITranslationCoreTests {
 	static func main() async throws {
 		for text in ["这是一篇中文文章，介绍如何构建 Agent、API 和 Claude Code 工程实践。", "這是一篇繁體中文文章，介紹人工智慧的應用與工程實踐。", "中文标题"] {
@@ -58,7 +64,10 @@ final class TranslationMockProtocol: URLProtocol, @unchecked Sendable {
 		sessionConfig.protocolClasses = [TranslationMockProtocol.self]
 		let client = AITranslationClient(session: URLSession(configuration: sessionConfig))
 		TranslationMockProtocol.responses = [(503, ""), (200, success)]
-		let translated = try await client.translate("Hello", configuration: config, apiKey: "test-key")
+		let recorder = ProgressRecorder()
+		let translated = try await client.translate("Hello", configuration: config, apiKey: "test-key") { done, total in await recorder.record(done, total) }
+		let progressValid = await recorder.valid()
+		assert(progressValid)
 		assert(translated == "你好" && TranslationMockProtocol.requests.count == 2)
 		assert(TranslationMockProtocol.requests[0].value(forHTTPHeaderField: "Authorization") == "Bearer test-key")
 		TranslationMockProtocol.responses = [(401, "private provider error")]

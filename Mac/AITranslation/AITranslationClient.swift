@@ -54,13 +54,15 @@ struct AITranslationClient: Sendable {
 
 	init(session: URLSession = .shared) { self.session = session }
 
-	func translate(_ text: String, configuration: AITranslationConfiguration, apiKey: String) async throws -> String {
+	func translate(_ text: String, configuration: AITranslationConfiguration, apiKey: String, progress: (@Sendable (Int, Int) async -> Void)? = nil) async throws -> String {
 		guard let endpoint = configuration.endpoint, !configuration.model.trimmingCharacters(in: .whitespaces).isEmpty,
 			  !configuration.targetLanguage.trimmingCharacters(in: .whitespaces).isEmpty else { throw AITranslationError.configuration }
 		guard !apiKey.isEmpty else { throw AITranslationError.missingKey }
 		guard text.count <= 200_000 else { throw AITranslationError.tooLarge }
 		var results = [String]()
-		for chunk in Self.chunks(text) {
+		let chunks = Self.chunks(text)
+		for (index, chunk) in chunks.enumerated() {
+			await progress?(index, chunks.count)
 			try Task.checkCancellation()
 			var request = URLRequest(url: endpoint)
 			request.httpMethod = "POST"
@@ -92,6 +94,7 @@ struct AITranslationClient: Sendable {
 			}
 			guard let result else { throw AITranslationError.invalidResponse }
 			results.append(result)
+			await progress?(index + 1, chunks.count)
 		}
 		return results.joined(separator: "\n\n")
 	}

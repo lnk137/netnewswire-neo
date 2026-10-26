@@ -82,10 +82,17 @@ final class DetailWebViewController: NSViewController {
 	}
 
 	private func addTranslationControls() {
-		let bar = NSStackView(views: [translateButton, originalButton, translationStatus])
+		let controls = NSStackView(views: [translateButton, originalButton, translationStatus])
+		controls.spacing = 10
+		let progressView = AITranslationProgressView()
+		let bar = NSStackView(views: [controls, progressView])
+		bar.orientation = .vertical
+		bar.alignment = .leading
+		progressView.translatesAutoresizingMaskIntoConstraints = false
+		progressView.widthAnchor.constraint(equalTo: bar.widthAnchor, constant: -24).isActive = true
 		bar.spacing = 10
 		bar.edgeInsets = NSEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
-		bar.frame = NSRect(x: 0, y: view.bounds.height - 44, width: view.bounds.width, height: 44)
+		bar.frame = NSRect(x: 0, y: view.bounds.height - 120, width: view.bounds.width, height: 120)
 		bar.autoresizingMask = [.width, .minYMargin]
 		translationStatus.textColor = .secondaryLabelColor
 		translationStatus.font = .systemFont(ofSize: 11)
@@ -99,7 +106,7 @@ final class DetailWebViewController: NSViewController {
 
 	override func viewDidLayout() {
 		super.viewDidLayout()
-		let height = min(CGFloat(44), view.bounds.height)
+		let height = min(CGFloat(120), view.bounds.height)
 		translationBar?.frame = NSRect(x: 0, y: view.bounds.height - height, width: view.bounds.width, height: height)
 		for case let contentView as DetailWebView in view.subviews {
 			contentView.frame = NSRect(x: 0, y: 0, width: view.bounds.width, height: view.bounds.height - height)

@@ -18,15 +18,56 @@ import Account
 	private var scanner: Task<Void, Never>?
 	private var failures = [String: String]()
 	private var backgroundPaused = false
+	private var retainCancelledJob = false
+	private(set) var isPaused = false
+	private(set) var isScanning = false
+	private(set) var chunkCompleted = 0
+	private(set) var chunkTotal = 0
+	private var skippedIDs = Set<String>()
+	var skippedChinese: Int { skippedIDs.count }
+	var currentTitle: String? { current?.article.title }
+	var canPause: Bool { pendingCount > 0 || isScanning || isPaused || backgroundPaused }
+	var pauseButtonTitle: String { isPaused || backgroundPaused ? "继续翻译" : "暂停翻译" }
+	var totalCount: Int { completed + pendingCount }
+	var fractionCompleted: Double {
+		guard totalCount > 0 else { return 0 }
+		let chunk = chunkTotal > 0 ? Double(chunkCompleted) / Double(chunkTotal) : 0
+		return (Double(completed) + chunk) / Double(totalCount)
+	}
 	private var notificationPending = false
 	private(set) var lastError: String?
 	private(set) var completed = 0
 	private let cacheDirectory: URL
 	var pendingCount: Int { queue.count + (current == nil ? 0 : 1) }
 	var progress: String {
-		if let lastError { return backgroundPaused ? "\(lastError) 后台已暂停；保存设置可重试。" : lastError }
-		if pendingCount > 0 { return "待翻译 \(pendingCount) 篇 · 本次已完成 \(completed) 篇" }
-		return "就绪 · 本次已完成 \(completed) 篇"
+		let counts = "已完成 \(completed) / \(totalCount) 篇 · 待处理 \(pendingCount) 篇 · 跳过中文 \(skippedChinese) 篇"
+		if let lastError { return "翻译失败，已暂停 · \(lastError)" }
+		if isPaused { return "已暂停 · \(counts)" }
+		if isScanning { return "正在扫描订阅文章… · \(counts)" }
+		if pendingCount > 0 { return "翻译中 · \(counts)" }
+		return completed > 0 ? "本次翻译完成 · \(counts)" : "就绪 · \(counts)"
+	}
+	var currentDetail: String {
+		guard let currentTitle else { return isPaused ? "点击继续翻译可恢复队列" : "中文文章自动跳过，译文缓存于本机" }
+		let part = chunkTotal > 0 ? " · 分段 \(min(chunkCompleted + 1, chunkTotal))/\(chunkTotal)" : ""
+		return "\(isPaused ? "已暂停" : "当前")：\(currentTitle)\(part)"
+	}
+
+	func togglePause() {
+		if isPaused || backgroundPaused {
+			isPaused = false
+			backgroundPaused = false
+			lastError = nil
+			failures.removeAll()
+			scanExistingArticles()
+			startWorker()
+		} else {
+			isPaused = true
+			retainCancelledJob = current != nil
+			scanner?.cancel()
+			worker?.cancel()
+		}
+		postChange()
 	}
 
 	private init() {
@@ -67,7 +108,11 @@ import Account
 		let configuration = AITranslationSettings.shared.configuration
 		if automatic && (!configuration.automaticallyTranslate || backgroundPaused) { return }
 		let text = sourceText(article)
-		guard !AITranslationClient.isChinese(text) else { return }
+		guard !AITranslationClient.isChinese(text) else {
+			skippedIDs.insert(article.accountID + ":" + article.articleID)
+			postChange()
+			return
+		}
 		guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 		let key = key(for: article, configuration: configuration)
 		guard !FileManager.default.fileExists(atPath: cacheDirectory.appendingPathComponent(key + ".txt").path) else { return }
@@ -98,8 +143,10 @@ import Account
 	@objc private func settingsChanged() {
 		scanner?.cancel()
 		queue.removeAll()
+		retainCancelledJob = false
 		worker?.cancel()
 		backgroundPaused = false
+		isPaused = false
 		lastError = nil
 		failures.removeAll()
 		scanExistingArticles()
@@ -116,12 +163,16 @@ import Account
 	}
 
 	private func scanExistingArticles() {
-		guard AITranslationSettings.shared.configuration.automaticallyTranslate, !backgroundPaused else { return }
+		guard AITranslationSettings.shared.configuration.automaticallyTranslate, !backgroundPaused, !isPaused else { return }
 		scanner?.cancel()
 		scanner = Task { [weak self] in
+			guard let self else { return }
+			self.isScanning = true
+			self.postChange()
+			defer { self.isScanning = false; self.postChange() }
 			for account in AccountManager.shared.activeAccounts {
 				for feed in account.flattenedFeeds() {
-					guard !Task.isCancelled, let self else { return }
+					guard !Task.isCancelled else { return }
 					let articles = await account.fetchArticlesAsync(.feed(feed))
 					guard !Task.isCancelled else { return }
 					for article in articles.sorted(by: { ($0.datePublished ?? .distantPast) > ($1.datePublished ?? .distantPast) }) {
@@ -134,7 +185,7 @@ import Account
 	}
 
 	private func startWorker() {
-		guard worker == nil, !queue.isEmpty else { return }
+		guard worker == nil, !queue.isEmpty, !isPaused else { return }
 		worker = Task { [weak self] in
 			guard let self else { return }
 			defer {
@@ -146,27 +197,44 @@ import Account
 			while !self.queue.isEmpty, !Task.isCancelled {
 				let job = self.queue.removeFirst()
 				self.current = job
+				self.chunkCompleted = 0
+				self.chunkTotal = 0
 				self.postChange()
 				do {
-					let translation = try await AITranslationClient().translate(job.text, configuration: job.configuration, apiKey: AITranslationSettings.shared.apiKey)
+					let translation = try await AITranslationClient().translate(job.text, configuration: job.configuration, apiKey: AITranslationSettings.shared.apiKey) { [weak self] done, total in
+						await self?.updateChunks(done, total: total)
+					}
 					try Task.checkCancellation()
 					try FileManager.default.createDirectory(at: self.cacheDirectory, withIntermediateDirectories: true)
 					try translation.write(to: self.cacheDirectory.appendingPathComponent(job.key + ".txt"), atomically: true, encoding: .utf8)
 					self.completed += 1
 					self.lastError = nil
 				} catch {
-					if Task.isCancelled { break }
+					if Task.isCancelled {
+						if self.retainCancelledJob { self.queue.insert(job, at: 0) }
+						self.retainCancelledJob = false
+						break
+					}
 					let message = error.localizedDescription
+					self.queue.insert(job, at: 0)
 					self.failures[job.key] = message
 					self.lastError = message
 					// Pause the backlog on failure instead of repeatedly spending quota or retrying invalid credentials.
 					self.backgroundPaused = true
-					self.stopBackgroundTranslation()
+					self.scanner?.cancel()
+					self.isPaused = true
+					break
 				}
 				self.current = nil
 				self.postChange()
 			}
 		}
+	}
+
+	private func updateChunks(_ done: Int, total: Int) {
+		chunkCompleted = done
+		chunkTotal = total
+		postChange()
 	}
 
 	private func postChange() {
