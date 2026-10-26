@@ -22,6 +22,12 @@ final class TranslationMockProtocol: URLProtocol, @unchecked Sendable {
 
 @main struct AITranslationCoreTests {
 	static func main() async throws {
+		for text in ["这是一篇中文文章，介绍如何构建 Agent、API 和 Claude Code 工程实践。", "這是一篇繁體中文文章，介紹人工智慧的應用與工程實踐。", "中文标题"] {
+			assert(AITranslationClient.isChinese(text), text)
+		}
+		for text in ["Build reliable AI agents with retrieval, tools and memory.", "The Chinese term 智能 means intelligence. This article discusses agent engineering in English.", "これは日本語の記事です。人工知能について説明します。", ""] {
+			assert(!AITranslationClient.isChinese(text), text)
+		}
 		var config = AITranslationConfiguration()
 		assert(config.endpoint?.absoluteString == "https://a6api.com/v1/chat/completions")
 		config.baseURL = "https://example.com"

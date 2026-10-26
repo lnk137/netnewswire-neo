@@ -39,7 +39,7 @@ import Account
 	func start() { scanExistingArticles() }
 
 	func sourceText(_ article: Article) -> String {
-		let body = article.contentText ?? article.contentHTML.map(AITranslationClient.plainText) ?? article.summary ?? ""
+		let body = [article.contentText, article.contentHTML.map(AITranslationClient.plainText), article.summary].compactMap { $0 }.first { !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty } ?? ""
 		return [article.title ?? "", body].joined(separator: "\n\n")
 	}
 
@@ -47,11 +47,15 @@ import Account
 		AITranslationClient.cacheKey(accountID: article.accountID, articleID: article.articleID, text: sourceText(article), configuration: configuration ?? AITranslationSettings.shared.configuration)
 	}
 
+	func isChinese(_ article: Article) -> Bool { AITranslationClient.isChinese(sourceText(article)) }
+
 	func cachedTranslation(for article: Article) -> String? {
-		try? String(contentsOf: cacheDirectory.appendingPathComponent(key(for: article) + ".txt"), encoding: .utf8)
+		guard !isChinese(article) else { return nil }
+		return try? String(contentsOf: cacheDirectory.appendingPathComponent(key(for: article) + ".txt"), encoding: .utf8)
 	}
 
 	func status(for article: Article) -> String {
+		if isChinese(article) { return "中文文章，无需翻译" }
 		let key = key(for: article)
 		if current?.key == key { return "正在翻译…" }
 		if queue.contains(where: { $0.key == key }) { return "已加入翻译队列" }
@@ -63,6 +67,7 @@ import Account
 		let configuration = AITranslationSettings.shared.configuration
 		if automatic && (!configuration.automaticallyTranslate || backgroundPaused) { return }
 		let text = sourceText(article)
+		guard !AITranslationClient.isChinese(text) else { return }
 		guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 		let key = key(for: article, configuration: configuration)
 		guard !FileManager.default.fileExists(atPath: cacheDirectory.appendingPathComponent(key + ".txt").path) else { return }

@@ -1,5 +1,6 @@
 import Foundation
 import CryptoKit
+import NaturalLanguage
 
 struct AITranslationConfiguration: Codable, Equatable, Sendable {
 	var baseURL = "https://a6api.com/v1"
@@ -36,6 +37,19 @@ enum AITranslationError: LocalizedError {
 }
 
 struct AITranslationClient: Sendable {
+	static func isChinese(_ text: String) -> Bool {
+		let sample = String(text.prefix(16000))
+		let letters = sample.unicodeScalars.filter { CharacterSet.letters.contains($0) }
+		guard !letters.isEmpty else { return false }
+		let han = letters.filter { (0x3400...0x9FFF).contains($0.value) || (0x20000...0x323AF).contains($0.value) }.count
+		guard han > 0 else { return false }
+		let kana = letters.contains { (0x3040...0x30FF).contains($0.value) }
+		let recognizer = NLLanguageRecognizer()
+		recognizer.processString(sample)
+		let language = recognizer.dominantLanguage
+		return language == .simplifiedChinese || language == .traditionalChinese || (!kana && Double(han) / Double(letters.count) >= 0.3)
+	}
+
 	let session: URLSession
 
 	init(session: URLSession = .shared) { self.session = session }

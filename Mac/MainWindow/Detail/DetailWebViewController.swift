@@ -443,6 +443,7 @@ private extension DetailWebViewController {
 		var body = rendering.html
 		if let article {
 			let translation = AITranslationService.shared.cachedTranslation(for: article)
+			translateButton.isEnabled = !AITranslationService.shared.isChinese(article)
 			translationStatus.stringValue = AITranslationService.shared.status(for: article)
 			translationStatus.toolTip = translationStatus.stringValue
 			originalButton.isEnabled = translation != nil
