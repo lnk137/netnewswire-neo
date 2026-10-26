@@ -54,6 +54,47 @@ final class DetailWebViewController: NSViewController {
 		}
 	}
 
+	private var showingTranslation = true
+	private lazy var translateButton = NSButton(title: "翻译为中文", target: self, action: #selector(translateArticle))
+	private lazy var originalButton = NSButton(title: "查看原文", target: self, action: #selector(toggleTranslation))
+	private let translationStatus = NSTextField(labelWithString: "")
+	private var lastTranslationSignature = ""
+
+	@objc private func translateArticle() {
+		guard let article else { return }
+		showingTranslation = true
+		AITranslationService.shared.enqueue(article)
+		reloadHTMLMaintainingScrollPosition()
+	}
+
+	@objc private func toggleTranslation() {
+		showingTranslation.toggle()
+		reloadHTMLMaintainingScrollPosition()
+	}
+
+	@objc private func translationChanged() {
+		guard isViewLoaded else { return }
+		let signature = article.map { AITranslationService.shared.key(for: $0) + AITranslationService.shared.status(for: $0) } ?? ""
+		guard signature != lastTranslationSignature else { return }
+		lastTranslationSignature = signature
+		reloadHTMLMaintainingScrollPosition()
+	}
+
+	private func addTranslationControls() {
+		let bar = NSStackView(views: [translateButton, originalButton, translationStatus])
+		bar.spacing = 10
+		bar.edgeInsets = NSEdgeInsets(top: 6, left: 12, bottom: 6, right: 12)
+		bar.frame = NSRect(x: 0, y: view.bounds.height - 44, width: view.bounds.width, height: 44)
+		bar.autoresizingMask = [.width, .minYMargin]
+		translationStatus.textColor = .secondaryLabelColor
+		translationStatus.font = .systemFont(ofSize: 11)
+		translationStatus.lineBreakMode = .byTruncatingTail
+		translationStatus.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+		view.addSubview(bar)
+		NotificationCenter.default.addObserver(self, selector: #selector(translationChanged), name: AITranslationService.changed, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(translationChanged), name: AITranslationSettings.changed, object: nil)
+	}
+
 	private var articleTextSize = AppDefaults.shared.articleTextSize
 	private var isArticleContentJavascriptEnabled = AppDefaults.shared.isArticleContentJavascriptEnabled
 
@@ -108,6 +149,7 @@ final class DetailWebViewController: NSViewController {
 
 		webView = createWebView()
 		view.addSubview(webView)
+		addTranslationControls()
 
 		// Hide the web view until the first reload (navigation) is committed (plus some delay) to avoid the white flash that happens on initial display in dark mode.
 		// See bug #901.
@@ -324,7 +366,9 @@ private extension DetailWebViewController {
 		configuration.userContentController.add(self, name: MessageName.mouseDidEnter)
 		configuration.userContentController.add(self, name: MessageName.mouseDidExit)
 
-		let webView = DetailWebView(frame: view.bounds, configuration: configuration)
+		var webFrame = view.bounds
+		webFrame.size.height = max(0, webFrame.height - 44)
+		let webView = DetailWebView(frame: webFrame, configuration: configuration)
 		webView.uiDelegate = self
 		webView.navigationDelegate = self
 		webView.keyboardDelegate = keyboardDelegate
@@ -384,11 +428,27 @@ private extension DetailWebViewController {
 			rendering = ArticleRenderer.articleHTML(article: article, extractedArticle: extractedArticle, theme: theme)
 		}
 
+		translateButton.isEnabled = article != nil
+		var body = rendering.html
+		if let article {
+			let translation = AITranslationService.shared.cachedTranslation(for: article)
+			translationStatus.stringValue = AITranslationService.shared.status(for: article)
+			translationStatus.toolTip = translationStatus.stringValue
+			originalButton.isEnabled = translation != nil
+			originalButton.title = showingTranslation ? "查看原文" : "查看译文"
+			if showingTranslation, let translation {
+				let escaped = AITranslationClient.escapedHTML(translation)
+				body = "<section aria-label='AI 译文' style='max-width:76ch;margin:2em auto;padding:0 24px'><p style='font-size:12px;opacity:.65'>AI 译文 · \(AITranslationClient.escapedHTML(AITranslationSettings.shared.configuration.targetLanguage))</p><div style='white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.85'>\(escaped)</div><details style='margin-top:2em'><summary>展开原文</summary>\(rendering.html)</details></section>"
+			}
+		} else {
+			originalButton.isEnabled = false
+			translationStatus.stringValue = ""
+		}
 		let substitutions = [
 			"title": rendering.title,
 			"baseURL": rendering.baseURL,
 			"style": rendering.style,
-			"body": rendering.html
+			"body": body
 		]
 
 		var html = try! MacroProcessor.renderedText(withTemplate: ArticleRenderer.page.html, substitutions: substitutions)

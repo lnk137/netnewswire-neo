@@ -32,7 +32,10 @@ final class PreferencesWindowController: NSWindowController, NSToolbarDelegate {
 		PreferencesToolbarItemSpec(identifier: NSToolbarItem.Identifier("Advanced"),
 								   name: NSLocalizedString("Advanced", comment: "Preferences"),
 								   image: Assets.Images.preferencesToolbarAdvanced,
-								   makeViewController: { AdvancedPreferencesViewController() })
+								   makeViewController: { AdvancedPreferencesViewController() }),
+		PreferencesToolbarItemSpec(identifier: NSToolbarItem.Identifier("AITranslation"),
+			name: "AI 翻译", image: NSImage(systemSymbolName: "character.book.closed", accessibilityDescription: "AI 翻译"),
+			makeViewController: { AITranslationPreferencesViewController() })
 	]
 
 	convenience init() {

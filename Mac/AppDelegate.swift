@@ -163,6 +163,11 @@ let appName = "NetNewsWire"
 
 	func applicationDidFinishLaunching(_ note: Notification) {
 
+		if !Platform.isRunningUnitTests {
+			do { try AITranslationSettings.shared.importBootstrapIfPresent() }
+			catch { Self.logger.error("Could not import AI configuration into Keychain.") }
+			AITranslationService.shared.start()
+		}
 		WebViewConfiguration.resolveBrowserUserAgent()
 		Task {
 			await WebViewConfiguration.compileContentBlockingRules()
