@@ -32,37 +32,81 @@ struct AITranslationDocument: Codable, Sendable {
 	}
 }
 
+private struct TranslationCheckpoint: Codable {
+	let sources: [String: String]
+	let translations: [String: String]
+}
+
 extension AITranslationClient {
-	func translateDocument(title: String, html: String, configuration: AITranslationConfiguration, apiKey: String, progress: (@Sendable (Int, Int) async -> Void)? = nil) async throws -> AITranslationDocument {
+	func translateDocument(title: String, html: String, configuration: AITranslationConfiguration, apiKey: String, checkpoint: URL? = nil, recovery: (@Sendable (String?) async -> Void)? = nil, progress: (@Sendable (Int, Int) async -> Void)? = nil) async throws -> AITranslationDocument {
 		guard title.count + html.count <= 200_000 else { throw AITranslationError.tooLarge }
 		let slots = AITranslationDocument.slots(in: html)
 		var sources = ["title": title]
 		for (index, slot) in slots.enumerated() where slot.translate { sources[String(index)] = slot.text }
 		sources = sources.filter { !$0.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+		var translations = [String: String]()
+		if let checkpoint, let data = try? Data(contentsOf: checkpoint), let saved = try? JSONDecoder().decode(TranslationCheckpoint.self, from: data), saved.sources == sources {
+			translations = saved.translations.filter { sources[$0.key] != nil && !$0.value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+		}
+		await progress?(translations.count, sources.count)
 		var batches = [[String: String]]()
 		var batch = [String: String]()
 		var size = 0
-		for key in sources.keys.sorted(by: { ($0 == "title" ? -1 : Int($0) ?? 0) < ($1 == "title" ? -1 : Int($1) ?? 0) }) {
+		for key in sources.keys.sorted(by: { ($0 == "title" ? -1 : Int($0) ?? 0) < ($1 == "title" ? -1 : Int($1) ?? 0) }) where translations[key] == nil {
 			guard let text = sources[key] else { continue }
-			if size + text.count > 2800, !batch.isEmpty { batches.append(batch); batch = [:]; size = 0 }
+			if size + text.count > 1800, !batch.isEmpty { batches.append(batch); batch = [:]; size = 0 }
 			batch[key] = text
 			size += text.count
 		}
 		if !batch.isEmpty { batches.append(batch) }
-		var translations = [String: String]()
-		for (index, batch) in batches.enumerated() {
+		for batch in batches {
 			try Task.checkCancellation()
-			await progress?(index, batches.count)
-			let input = try JSONEncoder().encode(batch)
-			let output = try await translate(String(decoding: input, as: UTF8.self), configuration: configuration, apiKey: apiKey, structured: true)
-			guard let data = output.data(using: .utf8), let translated = try? JSONDecoder().decode([String: String].self, from: data), Set(translated.keys) == Set(batch.keys), translated.values.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else { throw AITranslationError.invalidResponse }
+			let translated = try await translateBatch(batch, configuration: configuration, apiKey: apiKey, depth: 0, recovery: recovery)
 			translations.merge(translated) { _, new in new }
-			await progress?(index + 1, batches.count)
+			if let checkpoint {
+				try FileManager.default.createDirectory(at: checkpoint.deletingLastPathComponent(), withIntermediateDirectories: true)
+				try JSONEncoder().encode(TranslationCheckpoint(sources: sources, translations: translations)).write(to: checkpoint, options: .atomic)
+			}
+			await recovery?(nil)
+			await progress?(translations.count, sources.count)
 		}
 		let body = slots.enumerated().map { index, slot in
 			guard slot.translate, let text = translations[String(index)] else { return slot.text }
 			return AITranslationDocument.replacingText(slot.text, with: text)
 		}.joined()
 		return AITranslationDocument(title: translations["title"] ?? title, body: body)
+	}
+
+	private func translateBatch(_ batch: [String: String], configuration: AITranslationConfiguration, apiKey: String, depth: Int, recovery: (@Sendable (String?) async -> Void)?) async throws -> [String: String] {
+		try Task.checkCancellation()
+		do {
+			let input = try JSONEncoder().encode(batch)
+			let output = try await translate(String(decoding: input, as: UTF8.self), configuration: configuration, apiKey: apiKey, structured: true)
+			guard let data = output.data(using: .utf8), let translated = try? JSONDecoder().decode([String: String].self, from: data), Set(translated.keys) == Set(batch.keys), translated.values.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else { throw AITranslationError.invalidResponse }
+			return translated
+		} catch let error as AITranslationError {
+			switch error {
+			case .truncated, .invalidResponse, .empty:
+				guard depth < 5 else { throw error }
+				await recovery?("正在拆分长段，自动重试")
+				let keys = batch.keys.sorted()
+				if keys.count > 1 {
+					let leftKeys = Set(keys.prefix(keys.count / 2))
+					let left = try await translateBatch(batch.filter { leftKeys.contains($0.key) }, configuration: configuration, apiKey: apiKey, depth: depth + 1, recovery: recovery)
+					let right = try await translateBatch(batch.filter { !leftKeys.contains($0.key) }, configuration: configuration, apiKey: apiKey, depth: depth + 1, recovery: recovery)
+					return left.merging(right) { _, new in new }
+				}
+				guard let key = keys.first, let text = batch[key], text.count > 120 else { throw error }
+				let parts = Self.chunks(text, limit: max(1, text.count / 2))
+				var result = ""
+				for part in parts {
+					let translated = try await translateBatch([key: part], configuration: configuration, apiKey: apiKey, depth: depth + 1, recovery: recovery)
+					guard let value = translated[key] else { throw AITranslationError.invalidResponse }
+					result += value
+				}
+				return [key: result]
+			default: throw error
+			}
+		}
 	}
 }

@@ -62,6 +62,8 @@ import Account
 	private(set) var isScanning = false
 	private(set) var chunkCompleted = 0
 	private(set) var chunkTotal = 0
+	private(set) var recoveryMessage: String?
+	var failedCount: Int { failures.count }
 	private var skippedIDs = Set<String>()
 	var skippedChinese: Int { skippedIDs.count }
 	var currentTitle: String? { current?.article.title }
@@ -97,7 +99,7 @@ import Account
 			isPaused = false
 			backgroundPaused = false
 			lastError = nil
-			failures.removeAll()
+			if let key = queue.first?.key { failures[key] = nil }
 			scanExistingArticles()
 			startWorker()
 		} else {
@@ -162,6 +164,8 @@ import Account
 		}
 		guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return }
 		let key = key(for: article, configuration: configuration)
+		if automatic && failures[key] != nil { return }
+		if !automatic { failures[key] = nil }
 		guard !FileManager.default.fileExists(atPath: cacheDirectory.appendingPathComponent(key + ".json").path) else { return }
 		if current?.key == key { return }
 		if let index = queue.firstIndex(where: { $0.key == key }) {
@@ -253,14 +257,18 @@ import Account
 				self.current = job
 				self.chunkCompleted = 0
 				self.chunkTotal = 0
+				self.recoveryMessage = nil
 				self.postChange()
 				do {
-					let translation = try await AITranslationClient().translateDocument(title: job.article.title ?? "", html: job.html, configuration: job.configuration, apiKey: AITranslationSettings.shared.apiKey) { [weak self] done, total in
+					let translation = try await AITranslationClient().translateDocument(title: job.article.title ?? "", html: job.html, configuration: job.configuration, apiKey: AITranslationSettings.shared.apiKey, checkpoint: self.cacheDirectory.appendingPathComponent(job.key + ".partial.json"), recovery: { [weak self] message in
+						await self?.updateRecovery(message)
+					}) { [weak self] done, total in
 						await self?.updateChunks(done, total: total)
 					}
 					try Task.checkCancellation()
 					try FileManager.default.createDirectory(at: self.cacheDirectory, withIntermediateDirectories: true)
 					try JSONEncoder().encode(translation).write(to: self.cacheDirectory.appendingPathComponent(job.key + ".json"), options: .atomic)
+					try? FileManager.default.removeItem(at: self.cacheDirectory.appendingPathComponent(job.key + ".partial.json"))
 					self.cachedKeys.insert(job.key)
 					self.completed += 1
 					self.lastError = nil
@@ -271,8 +279,18 @@ import Account
 						break
 					}
 					let message = error.localizedDescription
-					self.queue.insert(job, at: 0)
 					self.failures[job.key] = message
+					if let contentError = error as? AITranslationError {
+						switch contentError {
+						case .truncated, .invalidResponse, .empty, .tooLarge:
+							self.current = nil
+							self.recoveryMessage = nil
+							self.postChange()
+							continue
+						default: break
+						}
+					}
+					self.queue.insert(job, at: 0)
 					self.lastError = message
 					// Pause the backlog on failure instead of repeatedly spending quota or retrying invalid credentials.
 					self.backgroundPaused = true
@@ -286,6 +304,7 @@ import Account
 		}
 	}
 
+	private func updateRecovery(_ message: String?) { recoveryMessage = message; postChange() }
 	private func updateChunks(_ done: Int, total: Int) {
 		chunkCompleted = done
 		chunkTotal = total

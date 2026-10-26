@@ -4,17 +4,30 @@ import Foundation
 final class TranslationMockProtocol: URLProtocol, @unchecked Sendable {
 	nonisolated(unsafe) static var responses: [(Int, String)] = []
 	nonisolated(unsafe) static var requests: [URLRequest] = []
+	nonisolated(unsafe) static var bodies = [Data]()
 	static let lock = NSLock()
 	override class func canInit(with request: URLRequest) -> Bool { true }
 	override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 	override func startLoading() {
 		Self.lock.lock()
 		Self.requests.append(request)
-		let (status, body) = Self.responses.removeFirst()
+		var body = request.httpBody ?? Data()
+		if body.isEmpty, let stream = request.httpBodyStream {
+			stream.open()
+			var buffer = [UInt8](repeating: 0, count: 4096)
+			while stream.hasBytesAvailable {
+				let count = stream.read(&buffer, maxLength: buffer.count)
+				if count <= 0 { break }
+				body.append(buffer, count: count)
+			}
+			stream.close()
+		}
+		Self.bodies.append(body)
+		let (status, responseBody) = Self.responses.removeFirst()
 		Self.lock.unlock()
 		let response = HTTPURLResponse(url: request.url!, statusCode: status, httpVersion: nil, headerFields: nil)!
 		client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
-		client?.urlProtocol(self, didLoad: Data(body.utf8))
+		client?.urlProtocol(self, didLoad: Data(responseBody.utf8))
 		client?.urlProtocolDidFinishLoading(self)
 	}
 	override func stopLoading() {}
@@ -98,10 +111,32 @@ actor ProgressRecorder {
 		assert(decoded.body == document.body)
 		for malformed in ["{}", "{\"title\":\"标题\",\"unexpected\":\"多余\"}", "not json"] {
 			TranslationMockProtocol.responses = [(200, try envelope(malformed))]
-			do { _ = try await client.translateDocument(title: "Title", html: "<p>Hello</p>", configuration: config, apiKey: "test-key"); assertionFailure("Invalid slot mapping accepted") }
+			do { _ = try await client.translateDocument(title: "Title", html: "", configuration: config, apiKey: "test-key"); assertionFailure("Invalid slot mapping accepted") }
 			catch { assert(error is AITranslationError) }
 		}
 
-		print("AI translation tests passed: endpoint validation, lossless chunking, cache invalidation, HTML escaping, response validation, retries, authentication failures, preserved HTML/link/image/code structure, slot validation and injection escaping.")
+		let truncated = success.replacingOccurrences(of: "stop", with: "length")
+		TranslationMockProtocol.responses = [(200, truncated), (200, try envelope("{\"1\":\"你好\"}")), (200, try envelope("{\"title\":\"标题\"}"))]
+		let recovered = try await client.translateDocument(title: "Title", html: "<p>Hello</p>", configuration: config, apiKey: "test-key")
+		assert(recovered.body == "<p>你好</p>" && recovered.title == "标题")
+		let payload = try JSONSerialization.jsonObject(with: TranslationMockProtocol.bodies.last!) as! [String: Any]
+		assert((payload["thinking"] as? [String: String])?["type"] == "disabled")
+		TranslationMockProtocol.responses = [(200, truncated), (200, try envelope("{\"0\":\"左\"}")), (200, try envelope("{\"0\":\"右\"}"))]
+		let split = try await client.translateDocument(title: "", html: String(repeating: "a", count: 260), configuration: config, apiKey: "test-key")
+		assert(split.body == "左右")
+		let checkpoint = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathComponent("partial.json")
+		defer { try? FileManager.default.removeItem(at: checkpoint.deletingLastPathComponent()) }
+		let longHTML = "<p>" + String(repeating: "a", count: 1500) + "</p><p>" + String(repeating: "b", count: 1500) + "</p>"
+		TranslationMockProtocol.responses = [(200, try envelope("{\"1\":\"第一段\",\"title\":\"标题\"}")), (401, "")]
+		do { _ = try await client.translateDocument(title: "Title", html: longHTML, configuration: config, apiKey: "test-key", checkpoint: checkpoint); assertionFailure("Authentication failure accepted") }
+		catch {}
+		assert(FileManager.default.fileExists(atPath: checkpoint.path))
+		let requestCount = TranslationMockProtocol.requests.count
+		TranslationMockProtocol.responses = [(200, try envelope("{\"4\":\"第二段\"}"))]
+		let resumed = try await client.translateDocument(title: "Title", html: longHTML, configuration: config, apiKey: "test-key", checkpoint: checkpoint)
+		assert(resumed.body == "<p>第一段</p><p>第二段</p>")
+		assert(TranslationMockProtocol.requests.count == requestCount + 1, "Completed segments were requested again")
+
+		print("AI translation tests passed: endpoint validation, lossless chunking, cache invalidation, HTML escaping, response validation, retries, authentication failures, preserved HTML/link/image/code structure, slot validation, injection escaping, adaptive splitting, thinking controls and checkpoint resume.")
 	}
 }
