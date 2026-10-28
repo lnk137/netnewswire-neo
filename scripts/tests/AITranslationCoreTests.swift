@@ -240,7 +240,7 @@ actor ProgressRecorder {
 		}
 
 		let truncated = success.replacingOccurrences(of: "stop", with: "length")
-		TranslationMockProtocol.responses = [(200, truncated), (200, try envelope("{\"1\":\"你好\"}")), (200, try envelope("{\"title\":\"标题\"}"))]
+		TranslationMockProtocol.responses = [(200, truncated), (200, try envelope("{\"title\":\"标题\"}")), (200, try envelope("{\"1\":\"你好\"}"))]
 		let recovered = try await client.translateDocument(title: "Title", html: "<p>Hello</p>", configuration: config, apiKey: "test-key")
 		assert(recovered.body == "<p>你好</p>" && recovered.title == "标题")
 		let payload = try JSONSerialization.jsonObject(with: TranslationMockProtocol.bodies.last!) as! [String: Any]
@@ -268,6 +268,47 @@ actor ProgressRecorder {
 		let resumed = try await client.translateDocument(title: "Title", html: longHTML, configuration: config, apiKey: "test-key", checkpoint: checkpoint)
 		assert(resumed.body == "<p>第一段</p><p>第二段</p>")
 		assert(TranslationMockProtocol.requests.count == requestCount + 1, "Completed segments were requested again")
+
+		// Long documents use larger batches with neighboring context, but only each target is emitted.
+		let longText = String(repeating: "alpha ", count: 34_200)
+		let hugeHTML = "<p>" + longText + "</p>"
+		assert(hugeHTML.count > 200_000)
+		let longSlots = AITranslationDocument.slots(in: hugeHTML, textLimit: 5000)
+		let sourcePairs = longSlots.enumerated().filter { $0.element.translate }.map { (String($0.offset), $0.element.text) }
+		var batches = [[String: String]]()
+		var pendingBatch = [String: String]()
+		var pendingSize = 0
+		for (id, text) in sourcePairs {
+			if pendingSize + text.count > 6000 && !pendingBatch.isEmpty { batches.append(pendingBatch); pendingBatch = [:]; pendingSize = 0 }
+			pendingBatch[id] = text
+			pendingSize += text.count
+		}
+		if !pendingBatch.isEmpty { batches.append(pendingBatch) }
+		let replies = try batches.map { batch in
+			try envelope(String(decoding: JSONEncoder().encode(batch.mapValues { _ in "译" }), as: UTF8.self))
+		}
+		let longCheckpoint = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString).appendingPathComponent("partial.json")
+		defer { try? FileManager.default.removeItem(at: longCheckpoint.deletingLastPathComponent()) }
+		TranslationMockProtocol.responses = [(200, replies[0]), (401, "")]
+		do { _ = try await client.translateDocument(title: "", html: hugeHTML, configuration: config, apiKey: "test-key", checkpoint: longCheckpoint); assertionFailure("Expected interruption") }
+		catch AITranslationError.http(401) { }
+		let afterFirstBatch = TranslationMockProtocol.requests.count
+		TranslationMockProtocol.responses = replies.dropFirst().map { (200, $0) }
+		let longResult = try await client.translateDocument(title: "", html: hugeHTML, configuration: config, apiKey: "test-key", checkpoint: longCheckpoint)
+		let expectedLongBody = longSlots.map { $0.translate ? AITranslationDocument.replacingText($0.text, with: "译") : $0.text }.joined()
+		assert(longResult.body == expectedLongBody)
+		assert(TranslationMockProtocol.requests.count - afterFirstBatch == replies.count - 1)
+		let longPayload = try JSONSerialization.jsonObject(with: TranslationMockProtocol.bodies.last!) as! [String: Any]
+		let longMessages = longPayload["messages"] as! [[String: String]]
+		assert(longMessages.last?["content"]?.contains("neighboring source text is context only") == true)
+		let neighbors = AITranslationClient.contextForBatch(["1": "middle"], sources: ["0": "before", "1": "middle", "2": "after"], orderedKeys: ["0", "1", "2"], limit: 4)
+		assert(neighbors.before == "fore" && neighbors.after == "afte")
+		let limitHTML = "<pre>" + String(repeating: "x", count: 599_989) + "</pre>"
+		assert(limitHTML.count == 600_000)
+		let atLimit = try await client.translateDocument(title: "", html: limitHTML, configuration: config, apiKey: "test-key")
+		assert(atLimit.body == limitHTML)
+		do { _ = try await client.translateDocument(title: "x", html: limitHTML, configuration: config, apiKey: "test-key"); assertionFailure("Accepted more than 600,000 characters") }
+		catch AITranslationError.tooLarge { }
 
 		print("AI translation tests passed: endpoint validation, lossless chunking, cache invalidation, HTML escaping, response validation, retries, authentication failures, preserved HTML/link/image/code structure, slot validation, injection escaping, adaptive splitting, thinking controls and checkpoint resume, 1–20 worker limits, live resizing, priority order and cancellation draining.")
 	}
