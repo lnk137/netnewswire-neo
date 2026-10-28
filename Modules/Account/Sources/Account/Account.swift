@@ -29,6 +29,7 @@ public extension Notification.Name {
 	static let UserDidDeleteAccount = Notification.Name("UserDidDeleteAccount")
 	static let AccountRefreshDidBegin = Notification.Name(rawValue: "AccountRefreshDidBegin")
 	static let AccountRefreshDidFinish = Notification.Name(rawValue: "AccountRefreshDidFinish")
+	static let NeoArticlesDeleted = Notification.Name("NeoArticlesDeleted")
 	static let AccountDidDownloadArticles = Notification.Name(rawValue: "AccountDidDownloadArticles")
 	static let AccountStateDidChange = Notification.Name(rawValue: "AccountStateDidChange")
 	static let StatusesDidChange = Notification.Name(rawValue: "StatusesDidChange")
@@ -930,6 +931,27 @@ public enum FetchType {
 		else { UserDefaults.standard.removeObject(forKey: key) }
 	}
 
+	private func deletedArticleIDsKey(for feedID: String) -> String {
+		"NeoDeletedArticleIDs." + Data((accountID + "\n" + feedID).utf8).base64EncodedString()
+	}
+
+	public func isLocallyDeleted(_ article: Article) -> Bool {
+		guard type == .onMyMac else { return false }
+		return (UserDefaults.standard.stringArray(forKey: deletedArticleIDsKey(for: article.feedID)) ?? []).contains(article.articleID)
+	}
+
+	public func deleteLocalArticles(_ articles: Set<Article>, from feed: Feed) async {
+		guard type == .onMyMac, !articles.isEmpty else { return }
+		let ids = Set(articles.filter { $0.accountID == accountID && $0.feedID == feed.feedID }.map(\.articleID))
+		guard !ids.isEmpty else { return }
+		let key = deletedArticleIDsKey(for: feed.feedID)
+		let previous = Set(UserDefaults.standard.stringArray(forKey: key) ?? [])
+		UserDefaults.standard.set(Array(previous.union(ids)), forKey: key)
+		await database.deleteAsync(articleIDs: ids)
+		updateUnreadCounts(feeds: [feed])
+		NotificationCenter.default.post(name: .NeoArticlesDeleted, object: self, userInfo: [UserInfoKey.articleIDs: ids, UserInfoKey.feeds: Set([feed])])
+	}
+
 	// MARK: - Updating Feeds
 
 	@discardableResult
@@ -952,7 +974,10 @@ public enum FetchType {
 		precondition(type == .onMyMac || type == .cloudKit)
 
 		let cutoff = existingFeed(withFeedID: feedID).flatMap { articleCutoff(for: $0) }
+		let deletedIDs = Set(UserDefaults.standard.stringArray(forKey: deletedArticleIDsKey(for: feedID)) ?? [])
 		let filtered = parsedItems.filter { item in
+			let id = item.syncServiceID ?? Article.calculatedArticleID(feedID: item.feedURL, uniqueID: item.uniqueID)
+			guard !deletedIDs.contains(id) else { return false }
 			guard let cutoff, let date = item.datePublished else { return true }
 			return date >= cutoff
 		}

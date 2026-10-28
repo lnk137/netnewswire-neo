@@ -142,6 +142,7 @@ import Account
 		NotificationCenter.default.addObserver(self, selector: #selector(scopeChanged), name: AITranslationSettings.scopeChanged, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(statusesChanged(_:)), name: .StatusesDidChange, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(articlesDownloaded(_:)), name: .AccountDidDownloadArticles, object: nil)
+		NotificationCenter.default.addObserver(self, selector: #selector(articlesDeleted(_:)), name: .NeoArticlesDeleted, object: nil)
 	}
 
 	func start() { scanExistingArticles() }
@@ -202,6 +203,7 @@ import Account
 	}
 
 	func enqueue(_ article: Article, automatic: Bool = false, respectsUnreadScope: Bool = false, startImmediately: Bool = true) {
+		guard article.account?.isLocallyDeleted(article) != true else { return }
 		let configuration = AITranslationSettings.shared.configuration
 		register(article)
 		postChange()
@@ -281,6 +283,21 @@ import Account
 		skippedIDs.removeAll()
 		completed = 0
 		scanExistingArticles()
+		postChange()
+	}
+
+	@objc private func articlesDeleted(_ note: Notification) {
+		guard let account = note.object as? Account,
+			let ids = note.userInfo?[Account.UserInfoKey.articleIDs] as? Set<String> else { return }
+		let keys = Set(entries.values.filter { $0.article.accountID == account.accountID && ids.contains($0.article.articleID) }.map(\.id))
+		queue.removeAll { keys.contains($0.key) }
+		for key in keys {
+			retainedCancellationKeys.remove(key)
+			pool.cancel(key)
+			entries.removeValue(forKey: key)
+			cachedKeys.remove(key)
+			failures.removeValue(forKey: key)
+		}
 		postChange()
 	}
 

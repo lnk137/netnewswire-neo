@@ -72,6 +72,16 @@ import ArticlesDatabase
 		#expect(Set(articles.map { $0.articleID }).isSubset(of: inWindow))
 	}
 
+	@Test func deletingArticlesRemovesCachedResults() async {
+		await seedArticles()
+		let deleted = articleIDs(forUniqueIDs: ["a-recent"])
+		#expect(!(await database.fetchArticlesAsync(articleIDs: deleted)).isEmpty)
+		await database.deleteAsync(articleIDs: deleted)
+		#expect(await database.fetchArticlesAsync(articleIDs: deleted).isEmpty)
+		#expect((await database.fetchArticlesAsync(feedID: feedA)).count == 2)
+		#expect(await database.fetchUnreadCountForTodayAsync(feedIDs: [feedA]) == 1)
+	}
+
 	@Test func emptyFeedIDsReturnNothing() async {
 		await seedArticles()
 		#expect(await database.fetchUnreadCountForTodayAsync(feedIDs: []) == 0)

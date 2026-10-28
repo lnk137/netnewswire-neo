@@ -260,6 +260,7 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 			NotificationCenter.default.addObserver(self, selector: #selector(avatarDidBecomeAvailable(_:)), name: .AvatarDidBecomeAvailable, object: nil)
 			NotificationCenter.default.addObserver(self, selector: #selector(faviconDidBecomeAvailable(_:)), name: .FaviconDidBecomeAvailable, object: nil)
 			NotificationCenter.default.addObserver(self, selector: #selector(accountDidDownloadArticles(_:)), name: .AccountDidDownloadArticles, object: nil)
+			NotificationCenter.default.addObserver(self, selector: #selector(neoArticlesDeleted(_:)), name: .NeoArticlesDeleted, object: nil)
 			NotificationCenter.default.addObserver(self, selector: #selector(accountStateDidChange(_:)), name: .AccountStateDidChange, object: nil)
 			NotificationCenter.default.addObserver(self, selector: #selector(accountsDidChange(_:)), name: .UserDidAddAccount, object: nil)
 			NotificationCenter.default.addObserver(self, selector: #selector(userDidDeleteAccount(_:)), name: .UserDidDeleteAccount, object: nil)
@@ -737,6 +738,12 @@ final class TimelineViewController: NSViewController, UndoableCommandRunner, Unr
 		if let indexesToReload = indexesToReload {
 			reloadCells(for: indexesToReload)
 		}
+	}
+
+	@objc func neoArticlesDeleted(_ note: Notification) {
+		guard let feeds = note.userInfo?[Account.UserInfoKey.feeds] as? Set<Feed>,
+			representedObjectsContainsAnyFeed(feeds) || representedObjectsContainsAnyPseudoFeed() else { return }
+		fetchAndReplacePreservingSelectionAsync()
 	}
 
 	@objc func accountDidDownloadArticles(_ note: Notification) {

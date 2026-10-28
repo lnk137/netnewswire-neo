@@ -345,6 +345,7 @@ final class ArticlesTable: DatabaseTable, Sendable {
 	public func delete(articleIDs: Set<String>, completion: DatabaseCompletionBlock?) {
 		self.queue.runInTransaction { database in
 			self.removeArticles(articleIDs, database)
+			self.removeArticleIDsFromCache(articleIDs)
 			DispatchQueue.main.async {
 				completion?()
 			}

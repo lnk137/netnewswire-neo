@@ -55,6 +55,55 @@ extension SidebarViewController {
 		AITranslationQueueWindow.shared.present(feedKey: feed.accountID + ":" + feed.feedID)
 	}
 
+	@objc func deleteFeedArticlesByDate(_ sender: Any?) {
+		guard let item = sender as? NSMenuItem, let feed = item.representedObject as? Feed,
+			let account = feed.account, let window = view.window else { return }
+		let start = NSDatePicker()
+		let end = NSDatePicker()
+		for picker in [start, end] {
+			picker.datePickerStyle = .textFieldAndStepper
+			picker.datePickerElements = [.yearMonthDay]
+		}
+		start.dateValue = Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date()
+		end.dateValue = Date()
+		let dates = NSStackView(views: [start, NSTextField(labelWithString: "至"), end])
+		dates.spacing = 8
+		dates.setFrameSize(dates.fittingSize)
+		let alert = NSAlert()
+		alert.messageText = "删除此订阅源的文章"
+		alert.informativeText = "选择发布日期范围，包含起止日期。删除后这些文章不会因刷新再次出现。"
+		alert.accessoryView = dates
+		alert.addButton(withTitle: "查找文章")
+		alert.addButton(withTitle: "取消")
+		alert.beginSheetModal(for: window) { response in
+			guard response == .alertFirstButtonReturn else { return }
+			let first = Calendar.current.startOfDay(for: start.dateValue)
+			let last = Calendar.current.startOfDay(for: end.dateValue)
+			guard first <= last, let exclusiveEnd = Calendar.current.date(byAdding: .day, value: 1, to: last) else {
+				let error = NSAlert()
+				error.messageText = "开始日期不能晚于结束日期"
+				error.beginSheetModal(for: window)
+				return
+			}
+			Task { @MainActor in
+				let all = await account.fetchArticlesAsync(.feed(feed))
+				let matches = Set(all.filter { article in
+					guard let date = article.datePublished else { return false }
+					return date >= first && date < exclusiveEnd
+				})
+				let confirm = NSAlert()
+				confirm.messageText = matches.isEmpty ? "没有找到符合日期的文章" : "删除 \(matches.count) 篇文章？"
+				confirm.informativeText = "包含已收藏的文章；删除后无法在应用中撤销。没有发布日期的文章不会被删除。"
+				if !matches.isEmpty { confirm.addButton(withTitle: "删除") }
+				confirm.addButton(withTitle: matches.isEmpty ? "好" : "取消")
+				confirm.beginSheetModal(for: window) { result in
+					guard !matches.isEmpty, result == .alertFirstButtonReturn else { return }
+					Task { await account.deleteLocalArticles(matches, from: feed) }
+				}
+			}
+		}
+	}
+
 	@objc func setFeedArticleCutoff(_ sender: Any?) {
 		guard let item = sender as? NSMenuItem, let feed = item.representedObject as? Feed,
 			let account = feed.account, let window = view.window else { return }
@@ -266,6 +315,7 @@ private extension SidebarViewController {
 		menu.addItem(menuItem("翻译此订阅源", #selector(translateFeedFromContextualMenu(_:)), feed))
 		if feed.account?.type == .onMyMac {
 			menu.addItem(menuItem("设置接收文章的起始日期…", #selector(setFeedArticleCutoff(_:)), feed))
+			menu.addItem(menuItem("按日期删除文章…", #selector(deleteFeedArticlesByDate(_:)), feed))
 		}
 		menu.addItem(NSMenuItem.separator())
 
