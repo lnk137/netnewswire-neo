@@ -46,13 +46,17 @@ import LocalAuthentication
 		NotificationCenter.default.post(name: Self.concurrencyChanged, object: self)
 	}
 	private let defaults: UserDefaults
-	private let service = "local.lnk137.NetNewsWireNeo.translation.v3"
-	private let account = "api-key"
+	private let credentialURL: URL
+	private let legacyKeyReader: () -> String?
 	private var cachedAPIKey: String?
+	private var attemptedMigration = false
 	private(set) var configuration: AITranslationConfiguration
 
-	init(defaults: UserDefaults = .standard) {
+	init(defaults: UserDefaults = .standard, credentialURL: URL? = nil, legacyKeyReader: (() -> String?)? = nil) {
 		self.defaults = defaults
+		let root = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+		self.credentialURL = credentialURL ?? root.appendingPathComponent("NetNewsWire Neo/Credentials/translation-api-key")
+		self.legacyKeyReader = legacyKeyReader ?? Self.readLegacyKey
 		if let data = defaults.data(forKey: "AITranslationConfiguration"),
 		   let saved = try? JSONDecoder().decode(AITranslationConfiguration.self, from: data) {
 			configuration = saved
@@ -61,48 +65,50 @@ import LocalAuthentication
 
 	var apiKey: String {
 		if let cachedAPIKey { return cachedAPIKey }
-		return readAPIKey(allowPrompt: false)
+		if let key = try? String(contentsOf: credentialURL, encoding: .utf8), !key.isEmpty {
+			cachedAPIKey = key
+			return key
+		}
+		guard !FileManager.default.fileExists(atPath: credentialURL.path), !attemptedMigration else { return "" }
+		attemptedMigration = true
+		guard let key = legacyKeyReader(), !key.isEmpty else { return "" }
+		do {
+			try writeAPIKey(key)
+			cachedAPIKey = key
+			return key
+		} catch { return "" }
 	}
 
-	/// Background jobs must never present authorization dialogs. Explicit UI retries only once.
-	@discardableResult func readAPIKey(allowPrompt: Bool) -> String {
-		var query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-			kSecAttrService as String: service, kSecAttrAccount as String: account,
-			kSecReturnData as String: true, kSecMatchLimit as String: kSecMatchLimitOne]
-		if !allowPrompt {
-			let context = LAContext()
-			context.interactionNotAllowed = true
-			query[kSecUseAuthenticationContext as String] = context
-		}
+	private static func readLegacyKey() -> String? {
+		let context = LAContext()
+		context.interactionNotAllowed = true
+		let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
+			kSecAttrService as String: "local.lnk137.NetNewsWireNeo.translation.v3",
+			kSecAttrAccount as String: "api-key", kSecReturnData as String: true,
+			kSecMatchLimit as String: kSecMatchLimitOne, kSecUseAuthenticationContext as String: context]
 		var result: CFTypeRef?
-		let status = SecItemCopyMatching(query as CFDictionary, &result)
-		guard status == errSecSuccess, let data = result as? Data else {
-			// A locked keychain or denied interaction can recover later in this launch.
-			if status == errSecItemNotFound { cachedAPIKey = "" }
-			return ""
-		}
-		let key = String(data: data, encoding: .utf8) ?? ""
-		cachedAPIKey = key
-		return key
+		guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
+			let data = result as? Data else { return nil }
+		return String(data: data, encoding: .utf8)
+	}
+
+	private func writeAPIKey(_ key: String) throws {
+		let directory = credentialURL.deletingLastPathComponent()
+		try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+		try FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: directory.path)
+		try Data(key.utf8).write(to: credentialURL, options: .atomic)
+		try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: credentialURL.path)
 	}
 
 	func save(_ configuration: AITranslationConfiguration, apiKey: String?) throws {
 		guard configuration.endpoint != nil, !configuration.model.trimmingCharacters(in: .whitespaces).isEmpty,
 			  !configuration.targetLanguage.trimmingCharacters(in: .whitespaces).isEmpty else { throw AITranslationError.configuration }
 		if let apiKey {
-			let query: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-				kSecAttrService as String: service, kSecAttrAccount as String: account]
-			let data = Data(apiKey.trimmingCharacters(in: .whitespacesAndNewlines).utf8)
-			var status = SecItemUpdate(query as CFDictionary, [kSecValueData as String: data] as CFDictionary)
-			if status == errSecItemNotFound {
-				var item = query
-				item[kSecValueData as String] = data
-				item[kSecAttrAccessible as String] = kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly
-				status = SecItemAdd(item as CFDictionary, nil)
-			}
-			guard status == errSecSuccess else { throw NSError(domain: NSOSStatusErrorDomain, code: Int(status)) }
-			cachedAPIKey = String(data: data, encoding: .utf8)
+			let key = apiKey.trimmingCharacters(in: .whitespacesAndNewlines)
+			try writeAPIKey(key)
+			cachedAPIKey = key
 		}
+
 		defaults.set(try JSONEncoder().encode(configuration), forKey: "AITranslationConfiguration")
 		self.configuration = configuration
 		NotificationCenter.default.post(name: Self.changed, object: self)

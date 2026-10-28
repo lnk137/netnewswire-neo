@@ -20,7 +20,7 @@ final class AITranslationPreferencesViewController: NSViewController {
 		baseURL.stringValue = configuration.baseURL
 		model.stringValue = configuration.model
 		language.stringValue = configuration.targetLanguage
-		apiKey.placeholderString = AITranslationSettings.shared.apiKey.isEmpty ? "输入 API 密钥" : "已保存至钥匙串；留空保持不变"
+		apiKey.placeholderString = AITranslationSettings.shared.apiKey.isEmpty ? "输入 API 密钥" : "已保存在本机；留空保持不变"
 		automatic.state = configuration.automaticallyTranslate ? .on : .off
 		onlyUnread.state = AITranslationSettings.shared.onlyUnread ? .on : .off
 		onlyUnread.target = self
@@ -52,8 +52,7 @@ final class AITranslationPreferencesViewController: NSViewController {
 		hint.textColor = .secondaryLabelColor
 		let save = NSButton(title: "保存设置", target: self, action: #selector(saveSettings))
 		let test = NSButton(title: "测试连接", target: self, action: #selector(testConnection))
-		let authorize = NSButton(title: "重新授权钥匙串", target: self, action: #selector(authorizeKeychain))
-		let actions = NSStackView(views: [save, test, authorize])
+		let actions = NSStackView(views: [save, test])
 		actions.spacing = 12
 		status.textColor = .secondaryLabelColor
 		let progressView = AITranslationProgressView()
@@ -108,16 +107,12 @@ final class AITranslationPreferencesViewController: NSViewController {
 		status.stringValue = AITranslationService.shared.progress
 	}
 
-	@objc private func authorizeKeychain() {
-		let key = AITranslationSettings.shared.readAPIKey(allowPrompt: true)
-		status.stringValue = key.isEmpty ? "未取得密钥。可在上方重新输入并保存。" : "钥匙串已授权，可点击继续翻译。"
-	}
 
 	private func persist() throws {
 		let configuration = AITranslationConfiguration(baseURL: baseURL.stringValue.trimmingCharacters(in: .whitespacesAndNewlines), model: model.stringValue.trimmingCharacters(in: .whitespacesAndNewlines), targetLanguage: language.stringValue.trimmingCharacters(in: .whitespacesAndNewlines), automaticallyTranslate: automatic.state == .on)
 		try AITranslationSettings.shared.save(configuration, apiKey: apiKey.stringValue.isEmpty ? nil : apiKey.stringValue)
 		apiKey.stringValue = ""
-		apiKey.placeholderString = "已保存至钥匙串；留空保持不变"
+		apiKey.placeholderString = "已保存在本机；留空保持不变"
 	}
 
 	@objc private func automaticChanged() {

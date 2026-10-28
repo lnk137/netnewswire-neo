@@ -165,7 +165,8 @@ let appName = "NetNewsWire Neo"
 
 		if !Platform.isRunningUnitTests {
 			do { try AITranslationSettings.shared.importBootstrapIfPresent() }
-			catch { Self.logger.error("Could not import AI configuration into Keychain.") }
+			catch { Self.logger.error("Could not import AI configuration.") }
+			_ = AITranslationSettings.shared.apiKey
 			AITranslationService.shared.start()
 		}
 		WebViewConfiguration.resolveBrowserUserAgent()

@@ -140,8 +140,30 @@ actor ProgressRecorder {
 		assert(!restored.allowsAutomaticTranslation(isRead: false, date: start.addingTimeInterval(-1)))
 		assert(!restored.allowsAutomaticTranslation(isRead: false, date: calendar.date(byAdding: .day, value: 1, to: end)!))
 	}
+	@MainActor static func verifyLocalCredentials() throws {
+		let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+		defer { try? FileManager.default.removeItem(at: root) }
+		let file = root.appendingPathComponent("credentials/key")
+		let suite = "NetNewsWireNeo.CredentialTests." + UUID().uuidString
+		guard let defaults = UserDefaults(suiteName: suite) else { preconditionFailure("Missing test defaults") }
+		defer { defaults.removePersistentDomain(forName: suite) }
+		var migrations = 0
+		let settings = AITranslationSettings(defaults: defaults, credentialURL: file, legacyKeyReader: { migrations += 1; return "legacy-test-key" })
+		assert(settings.apiKey == "legacy-test-key")
+		assert(migrations == 1)
+		let attrs = try FileManager.default.attributesOfItem(atPath: file.path)
+		assert((attrs[.posixPermissions] as? NSNumber)?.intValue == 0o600)
+		let dirAttrs = try FileManager.default.attributesOfItem(atPath: file.deletingLastPathComponent().path)
+		assert((dirAttrs[.posixPermissions] as? NSNumber)?.intValue == 0o700)
+		let reloaded = AITranslationSettings(defaults: defaults, credentialURL: file, legacyKeyReader: { assertionFailure("Unexpected legacy access"); return nil })
+		assert(reloaded.apiKey == "legacy-test-key")
+		try reloaded.save(reloaded.configuration, apiKey: " new-test-key ")
+		let saved = AITranslationSettings(defaults: defaults, credentialURL: file, legacyKeyReader: { nil })
+		assert(saved.apiKey == "new-test-key")
+	}
 	static func main() async throws {
 		verifyUnreadScope()
+		try verifyLocalCredentials()
 		try await WorkerPoolProbe.verify()
 		for text in ["这是一篇中文文章，介绍如何构建 Agent、API 和 Claude Code 工程实践。", "這是一篇繁體中文文章，介紹人工智慧的應用與工程實踐。", "中文标题"] {
 			assert(AITranslationClient.isChinese(text), text)

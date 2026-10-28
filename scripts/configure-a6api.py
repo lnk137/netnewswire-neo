@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage a one-time, owner-only bootstrap for Neo to import into Keychain on launch."""
+"""Stage a one-time, owner-only bootstrap for Neo to import into local storage on launch."""
 import argparse
 import json
 import os
@@ -31,4 +31,4 @@ fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
 os.fchmod(fd, 0o600)
 with os.fdopen(fd, "w") as file:
     json.dump(payload, file, ensure_ascii=False)
-print("a6api staged for one-time Keychain import. No credentials were printed.")
+print("a6api staged for one-time local import. No credentials were printed.")

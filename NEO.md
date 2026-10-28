@@ -41,19 +41,19 @@ bash scripts/build-neo.sh
 
 ## 凭据
 
-后台读取钥匙串不弹授权窗口。API 密钥保存于钥匙串，正常重启无需重新输入；钥匙串临时锁定时会在后续读取重试，不再将暂时读取失败缓存为永久空密钥。
+翻译 API 密钥以明文保存在本机 `~/Library/Application Support/NetNewsWire Neo/Credentials/translation-api-key`，目录权限为 0700、文件权限为 0600。应用正常使用时直接读取此文件，不需要钥匙串授权；同一 macOS 用户运行的其他程序仍可读取该文件，因此应保护用户账户和备份。密钥不编译进应用，也不提交到 Git。
 
-`scripts/ensure-local-signing.sh` 首次构建时生成专用的本地代码签名证书及私钥，存入当前用户默认钥匙串，仅授权系统 `codesign` 使用私钥；后续构建复用同一证书。指定要求绑定应用标识及证书指纹，不再使用随每次构建变化的 ad-hoc cdhash，也不设置全局证书信任或允许任意应用访问密钥。临时证书文件在导入后删除。请保留该签名身份；删除后重建身份会重新触发钥匙串授权。
+升级时，应用只在本地密钥文件不存在时尝试一次无提示读取旧钥匙串条目，并写入本地文件；旧条目保留。如果无法静默读取，请在「设置 → AI 翻译」中重新输入并保存密钥。之后无需再访问钥匙串。
 
-旧 ad-hoc 版本的翻译密钥条目保留。新版本使用 v3 条目，迁移时可运行 `conda run -n base python scripts/configure-a6api.py /path/to/agent-secrets.txt --preserve-settings`，从本机凭据库导入并保持现有模型、语言和自动翻译设置；应用启动导入后会删除临时初始化文件。
+`scripts/ensure-local-signing.sh` 使用持久的本地签名证书对应用打包；该证书的私钥仍由钥匙串保护，但不参与翻译时读取 API 密钥。
 
-API 密钥存放于 macOS 钥匙串，不编译进应用，不提交到 Git。a6api 首次安装可运行：
+a6api 首次安装可运行：
 
 ```sh
 conda run -n base python scripts/configure-a6api.py /path/to/agent-secrets.txt
 ```
 
-脚本只创建权限为 0600 的临时初始化文件；Neo 启动后导入钥匙串并删除文件。不要将此初始化文件纳入分发包。自动后台翻译会将 RSS 标题和正文发送给你配置的 API 提供商，并消耗该服务的调用额度。
+脚本创建权限为 0600 的临时初始化文件；Neo 启动后导入本地密钥文件并删除初始化文件。自动后台翻译会将 RSS 标题和正文发送给配置的 API 服务，并消耗该服务的调用额度。
 
 ## 中文界面
 
