@@ -131,6 +131,14 @@ actor ProgressRecorder {
 		restored.queuePaused = false
 		assert(!AITranslationSettings(defaults: defaults).queuePaused)
 		assert(restored.allowsAutomaticTranslation(isRead: true))
+		let calendar = Calendar.current
+		let start = calendar.startOfDay(for: Date())
+		let end = calendar.date(byAdding: .day, value: 2, to: start)!
+		restored.setDateScope(enabled: true, start: start, end: end)
+		assert(restored.allowsAutomaticTranslation(isRead: false, date: start))
+		assert(restored.allowsAutomaticTranslation(isRead: false, date: end.addingTimeInterval(86399)))
+		assert(!restored.allowsAutomaticTranslation(isRead: false, date: start.addingTimeInterval(-1)))
+		assert(!restored.allowsAutomaticTranslation(isRead: false, date: calendar.date(byAdding: .day, value: 1, to: end)!))
 	}
 	static func main() async throws {
 		verifyUnreadScope()

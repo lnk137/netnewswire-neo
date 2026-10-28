@@ -8,6 +8,9 @@ final class AITranslationPreferencesViewController: NSViewController {
 	private let concurrency = NSPopUpButton(frame: .zero, pullsDown: false)
 	private let automatic = NSButton(checkboxWithTitle: "自动后台翻译", target: nil, action: nil)
 	private let onlyUnread = NSButton(checkboxWithTitle: "仅翻译未读文章", target: nil, action: nil)
+	private let dateScope = NSButton(checkboxWithTitle: "仅翻译指定日期的文章", target: nil, action: nil)
+	private let startDate = NSDatePicker()
+	private let endDate = NSDatePicker()
 	private let status = NSTextField(wrappingLabelWithString: "")
 	private var testTask: Task<Void, Never>?
 
@@ -54,7 +57,21 @@ final class AITranslationPreferencesViewController: NSViewController {
 		actions.spacing = 12
 		status.textColor = .secondaryLabelColor
 		let progressView = AITranslationProgressView()
-		let scope = NSStackView(views: [automatic, onlyUnread])
+		let settings = AITranslationSettings.shared
+		dateScope.state = settings.dateScopeEnabled ? .on : .off
+		dateScope.target = self
+		dateScope.action = #selector(dateScopeChanged)
+		for picker in [startDate, endDate] {
+			picker.datePickerStyle = .textFieldAndStepper
+			picker.datePickerElements = [.yearMonthDay]
+			picker.target = self
+			picker.action = #selector(dateScopeChanged)
+		}
+		startDate.dateValue = settings.dateScopeStart
+		endDate.dateValue = settings.dateScopeEnd
+		let dates = NSStackView(views: [dateScope, startDate, NSTextField(labelWithString: "至"), endDate])
+		dates.spacing = 8
+		let scope = NSStackView(views: [automatic, onlyUnread, dates])
 		scope.orientation = .vertical
 		scope.alignment = .leading
 		scope.spacing = 8
@@ -76,6 +93,14 @@ final class AITranslationPreferencesViewController: NSViewController {
 		updateProgress()
 	}
 
+	@objc private func dateScopeChanged() {
+		guard startDate.dateValue <= endDate.dateValue else {
+			status.stringValue = "开始日期不能晚于结束日期。"
+			return
+		}
+		AITranslationSettings.shared.setDateScope(enabled: dateScope.state == .on, start: startDate.dateValue, end: endDate.dateValue)
+		status.stringValue = "翻译日期范围已更新。"
+	}
 	@objc private func concurrencySelected() { AITranslationSettings.shared.setConcurrency(concurrency.indexOfSelectedItem + 1) }
 	@objc private func onlyUnreadChanged() { AITranslationSettings.shared.setOnlyUnread(onlyUnread.state == .on) }
 	@objc private func updateProgress() {

@@ -205,8 +205,8 @@ import Account
 		let configuration = AITranslationSettings.shared.configuration
 		register(article)
 		postChange()
-		if automatic && (!configuration.automaticallyTranslate || backgroundPaused || !AITranslationSettings.shared.allowsAutomaticTranslation(isRead: article.status.read)) { return }
-		if respectsUnreadScope && !AITranslationSettings.shared.allowsAutomaticTranslation(isRead: article.status.read) { return }
+		if automatic && (!configuration.automaticallyTranslate || backgroundPaused || !AITranslationSettings.shared.allowsAutomaticTranslation(isRead: article.status.read, date: article.logicalDatePublished)) { return }
+		if respectsUnreadScope && !AITranslationSettings.shared.allowsAutomaticTranslation(isRead: article.status.read, date: article.logicalDatePublished) { return }
 		let text = sourceText(article)
 		guard !AITranslationClient.isChinese(text) else {
 			skippedIDs.insert(article.accountID + ":" + article.articleID)
@@ -341,7 +341,11 @@ import Account
 	}
 
 	private func removeIneligibleBackgroundJobs() {
-		queue.removeAll { $0.respectsUnreadScope && !AITranslationSettings.shared.allowsAutomaticTranslation(isRead: $0.article.status.read) }
+		queue.removeAll { $0.respectsUnreadScope && !AITranslationSettings.shared.allowsAutomaticTranslation(isRead: $0.article.status.read, date: $0.article.logicalDatePublished) }
+		for (key, running) in active where running.job.respectsUnreadScope && !AITranslationSettings.shared.allowsDate(running.job.article.logicalDatePublished) {
+			retainedCancellationKeys.remove(key)
+			pool.cancel(key)
+		}
 	}
 
 	private func startWorker() {

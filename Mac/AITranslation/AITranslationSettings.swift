@@ -17,7 +17,26 @@ import LocalAuthentication
 		defaults.set(value, forKey: "AITranslationOnlyUnread")
 		NotificationCenter.default.post(name: Self.scopeChanged, object: self)
 	}
-	func allowsAutomaticTranslation(isRead: Bool) -> Bool { !onlyUnread || !isRead }
+	var dateScopeEnabled: Bool { defaults.bool(forKey: "AITranslationDateScopeEnabled") }
+	var dateScopeStart: Date { defaults.object(forKey: "AITranslationDateScopeStart") as? Date ?? Calendar.current.date(byAdding: .month, value: -1, to: Date()) ?? Date() }
+	var dateScopeEnd: Date { defaults.object(forKey: "AITranslationDateScopeEnd") as? Date ?? Date() }
+	func setDateScope(enabled: Bool, start: Date, end: Date) {
+		defaults.set(enabled, forKey: "AITranslationDateScopeEnabled")
+		defaults.set(start, forKey: "AITranslationDateScopeStart")
+		defaults.set(end, forKey: "AITranslationDateScopeEnd")
+		NotificationCenter.default.post(name: Self.scopeChanged, object: self)
+	}
+	func allowsAutomaticTranslation(isRead: Bool, date: Date = Date()) -> Bool {
+		guard !onlyUnread || !isRead else { return false }
+		return allowsDate(date)
+	}
+	func allowsDate(_ date: Date) -> Bool {
+		guard dateScopeEnabled else { return true }
+		let calendar = Calendar.current
+		let start = calendar.startOfDay(for: dateScopeStart)
+		let end = calendar.date(byAdding: .day, value: 1, to: calendar.startOfDay(for: dateScopeEnd)) ?? dateScopeEnd
+		return date >= start && date < end
+	}
 	var concurrency: Int {
 		let value = defaults.object(forKey: "AITranslationConcurrency") as? Int ?? 1
 		return AITranslationWorkerPool.boundedLimit(value)
