@@ -914,6 +914,22 @@ public enum FetchType {
 		feedDictionariesNeedUpdate = true
 	}
 
+	/// Local feed cutoff applies to future downloads. Undated items remain eligible.
+	private func articleCutoffKey(for feedID: String) -> String {
+		let identity = Data((accountID + "\n" + feedID).utf8).base64EncodedString()
+		return "NeoFeedArticleCutoff." + identity
+	}
+
+	public func articleCutoff(for feed: Feed) -> Date? {
+		UserDefaults.standard.object(forKey: articleCutoffKey(for: feed.feedID)) as? Date
+	}
+
+	public func setArticleCutoff(_ date: Date?, for feed: Feed) {
+		let key = articleCutoffKey(for: feed.feedID)
+		if let date { UserDefaults.standard.set(date, forKey: key) }
+		else { UserDefaults.standard.removeObject(forKey: key) }
+	}
+
 	// MARK: - Updating Feeds
 
 	@discardableResult
@@ -935,7 +951,12 @@ public enum FetchType {
 		precondition(Thread.isMainThread)
 		precondition(type == .onMyMac || type == .cloudKit)
 
-		let articleChanges = await database.updateAsync(parsedItems: parsedItems, feedID: feedID, deleteOlder: deleteOlder)
+		let cutoff = existingFeed(withFeedID: feedID).flatMap { articleCutoff(for: $0) }
+		let filtered = parsedItems.filter { item in
+			guard let cutoff, let date = item.datePublished else { return true }
+			return date >= cutoff
+		}
+		let articleChanges = await database.updateAsync(parsedItems: Set(filtered), feedID: feedID, deleteOlder: deleteOlder && filtered.count == parsedItems.count)
 		sendNotificationAbout(articleChanges)
 		return articleChanges
 	}

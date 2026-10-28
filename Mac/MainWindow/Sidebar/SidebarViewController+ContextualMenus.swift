@@ -55,6 +55,33 @@ extension SidebarViewController {
 		AITranslationQueueWindow.shared.present(feedKey: feed.accountID + ":" + feed.feedID)
 	}
 
+	@objc func setFeedArticleCutoff(_ sender: Any?) {
+		guard let item = sender as? NSMenuItem, let feed = item.representedObject as? Feed,
+			let account = feed.account, let window = view.window else { return }
+		let existing = account.articleCutoff(for: feed)
+		let enabled = NSButton(checkboxWithTitle: "不接收此日期之前发布的文章", target: nil, action: nil)
+		enabled.state = existing == nil ? .off : .on
+		let picker = NSDatePicker()
+		picker.datePickerStyle = .textFieldAndStepper
+		picker.datePickerElements = [.yearMonthDay]
+		picker.dateValue = existing ?? Date()
+		let stack = NSStackView(views: [enabled, picker])
+		stack.orientation = .vertical
+		stack.alignment = .leading
+		stack.spacing = 10
+		stack.setFrameSize(stack.fittingSize)
+		let alert = NSAlert()
+		alert.messageText = "设置接收文章的起始日期"
+		alert.informativeText = "此设置只影响以后抓取的文章；没有发布日期的文章仍会接收。"
+		alert.accessoryView = stack
+		alert.addButton(withTitle: "保存")
+		alert.addButton(withTitle: "取消")
+		alert.beginSheetModal(for: window) { response in
+			guard response == .alertFirstButtonReturn else { return }
+			account.setArticleCutoff(enabled.state == .on ? Calendar.current.startOfDay(for: picker.dateValue) : nil, for: feed)
+		}
+	}
+
 	@objc func openHomePageFromContextualMenu(_ sender: Any?) {
 
 		guard let menuItem = sender as? NSMenuItem, let urlString = menuItem.representedObject as? String else {
@@ -237,6 +264,9 @@ private extension SidebarViewController {
 
 		let notificationText = feed.notificationDisplayName.capitalized
 		menu.addItem(menuItem("翻译此订阅源", #selector(translateFeedFromContextualMenu(_:)), feed))
+		if feed.account?.type == .onMyMac {
+			menu.addItem(menuItem("设置接收文章的起始日期…", #selector(setFeedArticleCutoff(_:)), feed))
+		}
 		menu.addItem(NSMenuItem.separator())
 
 		let notificationMenuItem = menuItem(notificationText, #selector(toggleNotificationsFromContextMenu(_:)), feed)
