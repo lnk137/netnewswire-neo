@@ -245,6 +245,14 @@ actor ProgressRecorder {
 		assert(recovered.body == "<p>你好</p>" && recovered.title == "标题")
 		let payload = try JSONSerialization.jsonObject(with: TranslationMockProtocol.bodies.last!) as! [String: Any]
 		assert((payload["thinking"] as? [String: String])?["type"] == "disabled")
+		let messages = payload["messages"] as! [[String: String]]
+		assert(messages.last?["content"]?.contains("Translate the string values") == true)
+		let fenced = try AITranslationClient.parseTranslatedSlots("```json\n{\"title\":\"标题\"}\n```", expectedKeys: ["title"])
+		assert(fenced["title"] == "标题")
+		for invalid in ["I'm ready to help. What would you like to do?", "before {\"title\":\"标题\"}", "```json\n{\"wrong\":\"标题\"}\n```"] {
+			do { _ = try AITranslationClient.parseTranslatedSlots(invalid, expectedKeys: ["title"]); assertionFailure("Invalid translation accepted") }
+			catch AITranslationError.invalidTranslation { }
+		}
 		TranslationMockProtocol.responses = [(200, truncated), (200, try envelope("{\"0\":\"左\"}")), (200, try envelope("{\"0\":\"右\"}"))]
 		let split = try await client.translateDocument(title: "", html: String(repeating: "a", count: 260), configuration: config, apiKey: "test-key")
 		assert(split.body == "左右")

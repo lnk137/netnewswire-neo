@@ -407,7 +407,7 @@ import Account
 			failures[job.key] = error.localizedDescription
 			if let contentError = error as? AITranslationError {
 				switch contentError {
-				case .truncated, .invalidResponse, .empty, .tooLarge: return
+				case .truncated, .invalidResponse, .invalidTranslation, .empty, .tooLarge: return
 				default: break
 				}
 			}

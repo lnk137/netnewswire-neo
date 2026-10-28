@@ -77,16 +77,29 @@ extension AITranslationClient {
 		return AITranslationDocument(title: translations["title"] ?? title, body: body)
 	}
 
+	static func parseTranslatedSlots(_ output: String, expectedKeys: Set<String>) throws -> [String: String] {
+		var text = output.trimmingCharacters(in: .whitespacesAndNewlines)
+		if text.hasPrefix("```"), text.hasSuffix("```"), let newline = text.firstIndex(of: "\n") {
+			let header = text[..<newline].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+			if header == "```" || header == "```json" {
+				text = String(text[text.index(after: newline)..<text.index(text.endIndex, offsetBy: -3)]).trimmingCharacters(in: .whitespacesAndNewlines)
+			}
+		}
+		guard let data = text.data(using: .utf8), let translated = try? JSONDecoder().decode([String: String].self, from: data), Set(translated.keys) == expectedKeys, translated.values.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else {
+			throw AITranslationError.invalidTranslation
+		}
+		return translated
+	}
+
 	private func translateBatch(_ batch: [String: String], configuration: AITranslationConfiguration, apiKey: String, depth: Int, recovery: (@Sendable (String?) async -> Void)?) async throws -> [String: String] {
 		try Task.checkCancellation()
 		do {
 			let input = try JSONEncoder().encode(batch)
 			let output = try await translate(String(decoding: input, as: UTF8.self), configuration: configuration, apiKey: apiKey, structured: true)
-			guard let data = output.data(using: .utf8), let translated = try? JSONDecoder().decode([String: String].self, from: data), Set(translated.keys) == Set(batch.keys), translated.values.allSatisfy({ !$0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }) else { throw AITranslationError.invalidResponse }
-			return translated
+			return try Self.parseTranslatedSlots(output, expectedKeys: Set(batch.keys))
 		} catch let error as AITranslationError {
 			switch error {
-			case .truncated, .invalidResponse, .empty:
+			case .truncated, .invalidResponse, .invalidTranslation, .empty:
 				guard depth < 5 else { throw error }
 				await recovery?("正在拆分长段，自动重试")
 				let keys = batch.keys.sorted()
