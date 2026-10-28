@@ -60,6 +60,27 @@ final class DetailWebViewController: NSViewController {
 	private let translationStatus = NSTextField(labelWithString: "")
 	private var lastTranslationSignature = ""
 	private var translationBar: NSStackView?
+	private var translationBarHeight: NSLayoutConstraint?
+	private var contentTopConstraints = [NSLayoutConstraint]()
+	private var translationControls: NSView?
+	private var translationProgress: NSView?
+	private lazy var collapseButton = NSButton(title: "收起", target: self, action: #selector(toggleTranslationBar))
+	private var translationBarCollapsed = UserDefaults.standard.bool(forKey: "AITranslationBarCollapsed")
+
+	@objc private func toggleTranslationBar() {
+		translationBarCollapsed.toggle()
+		UserDefaults.standard.set(translationBarCollapsed, forKey: "AITranslationBarCollapsed")
+		updateTranslationBarLayout()
+	}
+
+	private func updateTranslationBarLayout() {
+		translationControls?.isHidden = translationBarCollapsed
+		translationProgress?.isHidden = translationBarCollapsed
+		collapseButton.title = translationBarCollapsed ? "展开翻译" : "收起"
+		let height: CGFloat = translationBarCollapsed ? 32 : 88
+		translationBarHeight?.constant = height
+		contentTopConstraints.forEach { $0.constant = height }
+	}
 
 	@objc private func translateArticle() {
 		guard let article else { return }
@@ -90,7 +111,12 @@ final class DetailWebViewController: NSViewController {
 			button.font = .systemFont(ofSize: 11)
 		}
 		let progressView = AITranslationProgressView()
-		let bar = NSStackView(views: [controls, progressView])
+		collapseButton.bezelStyle = .rounded
+		collapseButton.controlSize = .small
+		let header = NSStackView(views: [collapseButton])
+		let bar = NSStackView(views: [header, controls, progressView])
+		translationControls = controls
+		translationProgress = progressView
 		bar.orientation = .vertical
 		bar.alignment = .leading
 		progressView.translatesAutoresizingMaskIntoConstraints = false
@@ -107,20 +133,25 @@ final class DetailWebViewController: NSViewController {
 			bar.leadingAnchor.constraint(equalTo: view.leadingAnchor),
 			bar.trailingAnchor.constraint(equalTo: view.trailingAnchor),
 			bar.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
-			bar.heightAnchor.constraint(equalToConstant: 120)
+			bar.heightAnchor.constraint(equalToConstant: 88)
 		])
 		translationBar = bar
+		translationBarHeight = bar.constraints.first { $0.firstAttribute == .height }
+		updateTranslationBarLayout()
 		NotificationCenter.default.addObserver(self, selector: #selector(translationChanged), name: AITranslationService.changed, object: nil)
 		NotificationCenter.default.addObserver(self, selector: #selector(translationChanged), name: AITranslationSettings.changed, object: nil)
 	}
 
 	private func constrainContent(_ content: DetailWebView) {
 		content.translatesAutoresizingMaskIntoConstraints = false
+		let top = content.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: translationBarCollapsed ? 32 : 88)
+		contentTopConstraints.removeAll { !$0.isActive }
+		contentTopConstraints.append(top)
 		NSLayoutConstraint.activate([
 			content.leadingAnchor.constraint(equalTo: view.leadingAnchor),
 			content.trailingAnchor.constraint(equalTo: view.trailingAnchor),
 			content.bottomAnchor.constraint(equalTo: view.bottomAnchor),
-			content.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 72)
+			top
 		])
 	}
 
